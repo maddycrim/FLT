@@ -127,11 +127,13 @@ theorem ActionTopology.continuousAdd : @ContinuousAdd A (actionTopology R A) _ :
 instance instIsActionTopology_continuousSMul [TopologicalSpace A] [IsActionTopology R A] :
     ContinuousSMul R A := isActionTopology R A ▸ ActionTopology.continuousSMul R A
 
+-- this can't be an instance because typclass inference can't be expected to find `R`.
 theorem isActionTopology_continuousAdd [TopologicalSpace A] [IsActionTopology R A] :
     ContinuousAdd A := isActionTopology R A ▸ ActionTopology.continuousAdd R A
 
+/-- The action topology is `≤` any topology making `A` into a topological module. -/
 theorem actionTopology_le [τA : TopologicalSpace A] [ContinuousSMul R A] [ContinuousAdd A] :
-    actionTopology R A ≤ τA := sInf_le ⟨‹ContinuousSMul R A›, ‹ContinuousAdd A›⟩
+    actionTopology R A ≤ τA := sInf_le ⟨inferInstance, inferInstance⟩
 
 end basics
 
@@ -201,33 +203,28 @@ variable {R : Type*} [τR : TopologicalSpace R] [Semiring R]
 variable {A : Type*} [AddCommMonoid A] [Module R A] [τA : TopologicalSpace A] [IsActionTopology R A]
 variable {B : Type*} [AddCommMonoid B] [Module R B] [τB : TopologicalSpace B]
 
+/-- If `A` and `B` are homeomorphic via a homeomorphism which is also `R`-linear, and if
+`A` has the action topology, then so does `B`. -/
 theorem iso (e : A ≃L[R] B) : IsActionTopology R B where
   isActionTopology' := by
-    -- get these in before I start putting new topologies on A and B
-    let g : A →[R] B := e.toMulActionHom
-    let g' : B →[R] A := e.symm.toMulActionHom
+    -- get these in before I start putting new topologies on A and B and have to use `@`
+    let g : A →ₗ[R] B := e.toLinearMap
+    let g' : B →ₗ[R] A := e.symm.toLinearMap
     let h : A →+ B := e
     let h' : B →+ A := e.symm
     simp_rw [e.toHomeomorph.symm.inducing.1, isActionTopology R A, actionTopology, induced_sInf]
-    congr 1
+    apply congr_arg
     ext τ
     rw [Set.mem_image]
-    -- it's the same picture
     constructor
     · rintro ⟨σ, ⟨hσ1, hσ2⟩, rfl⟩
-      refine ⟨?_, ?_⟩
-      · exact @induced_continuous_smul (f := @id R) (hf := continuous_id)
-          (g := g') (τA := σ) _ _ _ _ _
-      · exact @induced_continuous_add (h := h') σ _
+      exact ⟨continuousSMul_induced g', continuousAdd_induced h'⟩
     · rintro ⟨h1, h2⟩
       use τ.induced e
       rw [induced_compose]
-      refine ⟨⟨?_, ?_⟩, ?_⟩
-      · exact @induced_continuous_smul (f := @id R) (hf := continuous_id)
-          (g := g) (τA := τ) _ _ _ _ _
-      · exact @induced_continuous_add (h := h) τ _
-      · nth_rw 2 [← induced_id (t := τ)]
-        simp
+      refine ⟨⟨continuousSMul_induced g, continuousAdd_induced h⟩, ?_⟩
+      nth_rw 2 [← induced_id (t := τ)]
+      simp
 
 end iso
 
@@ -249,8 +246,8 @@ theorem continuous_of_distribMulActionHom (φ : A →+[R] B) : Continuous φ := 
   -- the induced topology, and so the function is continuous.
   rw [isActionTopology R A, continuous_iff_le_induced]
   --haveI : ContinuousAdd B := isActionTopology_continuousAdd R B
-  exact sInf_le <| ⟨induced_continuous_smul (φ.toMulActionHom) continuous_id,
-    induced_continuous_add φ.toAddMonoidHom⟩
+  exact sInf_le <| ⟨continuousSMul_induced (φ.toLinearMap),
+    continuousAdd_induced φ.toAddMonoidHom⟩
 
 @[fun_prop, continuity]
 theorem continuous_of_linearMap (φ : A →ₗ[R] B) : Continuous φ :=
