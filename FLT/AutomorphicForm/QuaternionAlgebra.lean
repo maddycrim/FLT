@@ -45,7 +45,6 @@ instance : Algebra A (D ⊗[R] A) := --Algebra.TensorProduct.rightAlgebra #exit
     · simp_all [left_distrib, right_distrib]
     )
 
-#exit
 instance [Module.Finite R D] : Module.Finite A (D ⊗[R] A) := sorry
 instance [Module.Free R D]  : Module.Free A (D ⊗[R] A) := sorry
 
