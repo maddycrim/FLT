@@ -32,21 +32,20 @@ section missing_instances
 
 variable {R D A : Type*} [CommRing R] [Ring D] [CommRing A] [Algebra R D] [Algebra R A]
 
+#check Algebra.TensorProduct.rightAlgebra -- incorrectly demands CommRing A
 #synth Algebra A (A ⊗[R] D)
--- does this make a diamond?
-instance : Algebra A (D ⊗[R] A) :=
+-- does this make a diamond? (yes)
+instance : Algebra A (D ⊗[R] A) := --Algebra.TensorProduct.rightAlgebra #exit
   Algebra.TensorProduct.includeRight.toRingHom.toAlgebra' (by
-    simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, Algebra.TensorProduct.includeRight_apply]
     intro a b
-    apply TensorProduct.induction_on (motive := fun b ↦ 1 ⊗ₜ[R] a * b = b * 1 ⊗ₜ[R] a)
+    simp only [AlgHom.toRingHom_eq_coe, RingHom.coe_coe, Algebra.TensorProduct.includeRight_apply]
+    induction b using TensorProduct.induction_on
     · simp only [mul_zero, zero_mul]
-    · intro d a'
-      simp only [Algebra.TensorProduct.tmul_mul_tmul, one_mul, mul_one]
-      rw [NonUnitalCommSemiring.mul_comm]
-    · intro x y hx hy
-      rw [left_distrib, hx, hy, right_distrib]
+    · simp only [Algebra.TensorProduct.tmul_mul_tmul, one_mul, mul_one, NonUnitalCommSemiring.mul_comm]
+    · simp_all [left_distrib, right_distrib]
     )
 
+#exit
 instance [Module.Finite R D] : Module.Finite A (D ⊗[R] A) := sorry
 instance [Module.Free R D]  : Module.Free A (D ⊗[R] A) := sorry
 
