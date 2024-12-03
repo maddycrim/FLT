@@ -2,6 +2,10 @@ import Mathlib -- **TODO** fix when finished or if `exact?` is too slow
 --import Mathlib.RingTheory.DedekindDomain.FiniteAdeleRing
 --import Mathlib.NumberTheory.NumberField.Basic
 --import Mathlib.NumberTheory.RamificationInertia
+import FLT.Mathlib.Algebra.Order.Monoid.Unbundled.TypeTags
+import FLT.Mathlib.Algebra.Order.Hom.Monoid
+import FLT.Mathlib.Algebra.Algebra.Subalgebra.Pi
+
 /-!
 
 # Base change of adele rings.
@@ -14,6 +18,8 @@ the natural `L`-algebra map `𝔸_K^∞ ⊗[K] L → 𝔸_L^∞`, and show that 
 is an isomorphism.
 
 -/
+
+open scoped Multiplicative
 
 -- The general set-up.
 
@@ -44,9 +50,6 @@ example : Module.Finite A B := by
 
 /-
 In this generality there's a natural isomorphism `L ⊗[K] 𝔸_K^∞ → 𝔸_L^∞` .
-
-Update: Javier suggests p21 of
-https://math.berkeley.edu/~ltomczak/notes/Mich2022/LF_Notes.pdf
 -/
 
 -- We start by filling in some holes in the API for finite extensions of Dedekind domains.
@@ -60,8 +63,6 @@ def comap (w : HeightOneSpectrum B) : HeightOneSpectrum A where
   asIdeal := w.asIdeal.comap (algebraMap A B)
   isPrime := Ideal.comap_isPrime (algebraMap A B) w.asIdeal
   ne_bot := mt Ideal.eq_bot_of_comap_eq_bot w.ne_bot
-
-open scoped algebraMap
 
 lemma mk_count_factors_map
     (hAB : Function.Injective (algebraMap A B))
@@ -140,12 +141,14 @@ lemma valuation_comap (w : HeightOneSpectrum B) (x : K) :
   simp [valuation, ← IsScalarTower.algebraMap_apply A K L, IsScalarTower.algebraMap_apply A B L,
     ← intValuation_comap A B (algebraMap_injective_of_field_isFractionRing A B K L), div_pow]
 
--- Say w is a finite place of L lying above v a finite places
--- of K. Then there's a ring hom K_v -> L_w.
 variable {B L} in
-noncomputable def adicCompletion_comap_ringHom (w : HeightOneSpectrum B) :
-    (adicCompletion K (comap A w)) →+* (adicCompletion L w) :=
-  letI : UniformSpace K := (comap A w).adicValued.toUniformSpace;
+
+/-- Say `w` is a finite place of `L` lying above `v` a finite place of `K`. Then there's a ring hom
+`K_v → L_w`. -/
+noncomputable def adicCompletionComapRingHom
+    (v : HeightOneSpectrum A) (w : HeightOneSpectrum B) (hvw : v = comap A w) :
+    adicCompletion K v →+* adicCompletion L w :=
+  letI : UniformSpace K := v.adicValued.toUniformSpace;
   letI : UniformSpace L := w.adicValued.toUniformSpace;
   UniformSpace.Completion.mapRingHom (algebraMap K L) <| by
   -- question is the following:
@@ -153,40 +156,224 @@ noncomputable def adicCompletion_comap_ringHom (w : HeightOneSpectrum B) :
   -- and if w is a finite place of L lying above v a finite place of K,
   -- and if we give L the w-adic topology and K the v-adic topology,
   -- then the map K → L is continuous
+  subst hvw
   refine continuous_of_continuousAt_zero (algebraMap K L) ?hf
   delta ContinuousAt
   simp only [map_zero]
   rw [(@Valued.hasBasis_nhds_zero K _ _ _ (comap A w).adicValued).tendsto_iff
     (@Valued.hasBasis_nhds_zero L _ _ _ w.adicValued)]
   simp only [HeightOneSpectrum.adicValued_apply, Set.mem_setOf_eq, true_and, true_implies]
-  -- Modulo the fact that the division doesn't make sense, the next line is
-  -- "refine fun i ↦ ⟨i ^ (1 / Ideal.ramificationIdx (algebraMap A B) (comap A w).asIdeal w.asIdeal), fun _ h ↦ ?_⟩"
-  -- now use `valuation_comap` to finish
-  sorry
+  rw [WithZero.unitsWithZeroEquiv.forall_congr_left, Multiplicative.forall]
+  intro a
+  rw [WithZero.unitsWithZeroEquiv.exists_congr_left, Multiplicative.exists]
+  let m := Ideal.ramificationIdx (algebraMap A B) (comap A w).asIdeal w.asIdeal
+  let e : ℤ ≃ ℤₘ₀ˣ := Multiplicative.ofAdd.trans OrderMonoidIso.unitsWithZero.symm.toEquiv
+  have e_apply (a : ℤ) : e a = OrderMonoidIso.unitsWithZero.symm (Multiplicative.ofAdd a) := rfl
+  have hm : m ≠ 0 := by
+    refine Ideal.IsDedekindDomain.ramificationIdx_ne_zero ?_ w.2 Ideal.map_comap_le
+    exact (Ideal.map_eq_bot_iff_of_injective
+      (algebraMap_injective_of_field_isFractionRing A B K L)).not.mpr (comap A w).3
+  refine ⟨a / m, fun x hx ↦ ?_⟩
+  simp_rw [← valuation_comap A]
+  calc
+    (comap A w).valuation x ^ m < e (a / ↑m) ^ m := by gcongr; exacts [zero_le', hx]
+  _ = e (m • (a / ↑m)) := by
+    dsimp [e]
+    norm_cast
+    rw [map_pow]
+  _ ≤ e a := by
+    simp only [nsmul_eq_mul, e_apply, Units.val_le_val, OrderIsoClass.map_le_map_iff]
+    rw [mul_comm]
+    exact Int.mul_le_of_le_ediv (by positivity) le_rfl
 
+-- The below works!
+--variable (w : HeightOneSpectrum B) in
+--#synth SMul K (adicCompletion L w)
 
-noncomputable local instance (w : HeightOneSpectrum B) :
-    Algebra K (adicCompletion L w) := RingHom.toAlgebra <|
-  (algebraMap L (adicCompletion L w)).comp (algebraMap K L)
+-- So we need to be careful making L_w into a K-algebra
+-- https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/beef.20up.20smul.20on.20completion.20to.20algebra.20instance/near/484166527
+-- Hopefully resolved in https://github.com/leanprover-community/mathlib4/pull/19466
+variable (w : HeightOneSpectrum B) in
+noncomputable instance : Algebra K (adicCompletion L w) where
+  toFun k := algebraMap L (adicCompletion L w) (algebraMap K L k)
+  map_one' := by simp only [map_one]
+  map_mul' k₁ k₂ := by simp only [map_mul]
+  map_zero' := by simp only [map_zero]
+  map_add' k₁ k₂ := by simp only [map_add]
+  commutes' k lhat := mul_comm _ _
+  smul_def' k lhat := by
+    simp only [RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
+    rw [UniformSpace.Completion.smul_def] -- not sure if this is the right move
+    sorry -- surely true; issue #230
 
+variable (w : HeightOneSpectrum B) in
+instance : IsScalarTower K L (adicCompletion L w) := IsScalarTower.of_algebraMap_eq fun _ ↦ rfl
 
-variable {B L} in
-noncomputable def adicCompletion_comap_algHom (w : HeightOneSpectrum B) :
-    (HeightOneSpectrum.adicCompletion K (comap A w)) →ₐ[K]
+noncomputable def adicCompletionComapAlgHom
+  (v : HeightOneSpectrum A) (w : HeightOneSpectrum B) (hvw : v = comap A w) :
+    (HeightOneSpectrum.adicCompletion K v) →A[K]
     (HeightOneSpectrum.adicCompletion L w) where
-  __ := adicCompletion_comap_ringHom A K w
+  __ := adicCompletionComapRingHom A K v w hvw
   commutes' r := by
+    subst hvw
     simp only [RingHom.toMonoidHom_eq_coe, OneHom.toFun_eq_coe, MonoidHom.toOneHom_coe,
       MonoidHom.coe_coe]
-    have : (adicCompletion_comap_ringHom A K w) (r : adicCompletion K (comap A w))  =
+    have : (adicCompletionComapRingHom A K _ w rfl) (algebraMap _ _ r)  =
         (algebraMap L (adicCompletion L w)) (algebraMap K L r) := by
       letI : UniformSpace L := w.adicValued.toUniformSpace
       letI : UniformSpace K := (comap A w).adicValued.toUniformSpace
-      rw [adicCompletion_comap_ringHom, UniformSpace.Completion.mapRingHom]
-      rw [show (r : adicCompletion K (comap A w)) = @UniformSpace.Completion.coe' K this r from rfl]
+      rw [adicCompletionComapRingHom, UniformSpace.Completion.mapRingHom]
       apply UniformSpace.Completion.extensionHom_coe
-    rw [this]
-    rfl
+    rw [this, ← IsScalarTower.algebraMap_apply K L]
+  cont :=
+    letI : UniformSpace K := v.adicValued.toUniformSpace;
+    letI : UniformSpace L := w.adicValued.toUniformSpace;
+    UniformSpace.Completion.continuous_extension
+
+omit [IsIntegralClosure B A L] [FiniteDimensional K L] [Algebra.IsSeparable K L] in
+lemma adicCompletionComapAlgHom_coe
+    (v : HeightOneSpectrum A) (w : HeightOneSpectrum B) (hvw : v = comap A w) (x : K) :
+    adicCompletionComapAlgHom A K L B v w hvw x = algebraMap K L x :=
+  (adicCompletionComapAlgHom A K L B v w hvw).commutes _
+
+-- this name is surely wrong
+omit [IsIntegralClosure B A L] [FiniteDimensional K L] [Algebra.IsSeparable K L] in
+open WithZeroTopology in
+lemma v_adicCompletionComapAlgHom
+  (v : HeightOneSpectrum A) (w : HeightOneSpectrum B) (hvw : v = comap A w) (x) :
+    Valued.v (adicCompletionComapAlgHom A K L B v w hvw x) = Valued.v x ^
+      Ideal.ramificationIdx (algebraMap A B) (comap A w).asIdeal w.asIdeal := by
+  revert x
+  apply funext_iff.mp
+  symm
+  letI : UniformSpace K := v.adicValued.toUniformSpace
+  letI : UniformSpace L := w.adicValued.toUniformSpace
+  apply UniformSpace.Completion.ext
+  · exact Valued.continuous_valuation.pow _
+  · exact Valued.continuous_valuation.comp (adicCompletionComapAlgHom ..).cont
+  intro a
+  simp only [Valued.valuedCompletion_apply, adicCompletionComapAlgHom_coe]
+  show v.valuation a ^ _ = (w.valuation _)
+  subst hvw
+  rw [← valuation_comap A K L B w a]
+
+noncomputable def adicCompletionComapAlgHom' (v : HeightOneSpectrum A) :
+  (HeightOneSpectrum.adicCompletion K v) →ₐ[K]
+    (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1) :=
+  Pi.algHom _ _ fun i ↦ adicCompletionComapAlgHom A K L B v i.1 i.2
+
+noncomputable def adicCompletionContinuousComapAlgHom (v : HeightOneSpectrum A) :
+  (HeightOneSpectrum.adicCompletion K v) →A[K]
+    (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1) where
+  __ := adicCompletionComapAlgHom' A K L B v
+  cont := continuous_pi fun w ↦ (adicCompletionComapAlgHom A K L B v _ w.2).cont
+
+open scoped TensorProduct -- ⊗ notation for tensor product
+
+noncomputable def adicCompletionTensorComapAlgHom (v : HeightOneSpectrum A) :
+    L ⊗[K] adicCompletion K v →ₐ[L]
+      Π w : {w : HeightOneSpectrum B // v = comap A w}, adicCompletion L w.1 :=
+  Algebra.TensorProduct.lift (Algebra.ofId _ _) (adicCompletionComapAlgHom' A K L B v) fun _ _ ↦ .all _ _
+
+lemma adicCompletionComapAlgIso_tmul_apply (v : HeightOneSpectrum A) (x y i) :
+  adicCompletionTensorComapAlgHom A K L B v (x ⊗ₜ y) i =
+    x • adicCompletionComapAlgHom A K L B v i.1 i.2 y := by
+  rw [Algebra.smul_def]
+  rfl
+
+attribute [local instance 9999] SMulCommClass.of_commMonoid TensorProduct.isScalarTower_left IsScalarTower.right
+
+instance (R K : Type*) [CommRing R] [IsDedekindDomain R] [Field K]
+    [Algebra R K] [IsFractionRing R K] (v : HeightOneSpectrum R) :
+    IsScalarTower R (adicCompletionIntegers K v) (adicCompletion K v) :=
+  ⟨fun x y z ↦ by exact smul_mul_assoc x y.1 z⟩
+
+noncomputable
+def adicCompletionIntegersSubalgebra {R : Type*} (K : Type*) [CommRing R]
+    [IsDedekindDomain R] [Field K] [Algebra R K] [IsFractionRing R K] (v : HeightOneSpectrum R) :
+    Subalgebra R (HeightOneSpectrum.adicCompletion K v) where
+  __ := HeightOneSpectrum.adicCompletionIntegers K v
+  algebraMap_mem' r := coe_mem_adicCompletionIntegers v r
+
+noncomputable def tensorAdicCompletionIntegersTo (v : HeightOneSpectrum A) :
+    B ⊗[A] adicCompletionIntegers K v →ₐ[B] L ⊗[K] adicCompletion K v :=
+  Algebra.TensorProduct.lift
+    ((Algebra.TensorProduct.includeLeft).comp (Algebra.ofId B L))
+    ((Algebra.TensorProduct.includeRight.restrictScalars A).comp (IsScalarTower.toAlgHom _ _ _))
+    (fun _ _ ↦ .all _ _)
+
+set_option linter.deprecated false in -- `map_zero` and `map_add` time-outs
+theorem range_adicCompletionComapAlgIso_tensorAdicCompletionIntegersTo_le_pi
+    (v : HeightOneSpectrum A) :
+    AlgHom.range (((adicCompletionTensorComapAlgHom A K L B v).restrictScalars B).comp
+      (tensorAdicCompletionIntegersTo A K L B v)) ≤
+      Subalgebra.pi Set.univ (fun _ ↦ adicCompletionIntegersSubalgebra _ _) := by
+  rintro _ ⟨x, rfl⟩ i -
+  simp only [Subalgebra.coe_toSubmodule, AlgEquiv.toAlgHom_eq_coe, AlgHom.toRingHom_eq_coe,
+    RingHom.coe_coe, AlgHom.coe_comp, AlgHom.coe_restrictScalars', AlgHom.coe_coe,
+    Function.comp_apply, SetLike.mem_coe]
+  induction' x with x y x y hx hy
+  · rw [(tensorAdicCompletionIntegersTo A K L B v).map_zero,
+      (adicCompletionTensorComapAlgHom A K L B v).map_zero]
+    exact zero_mem _
+  · simp only [tensorAdicCompletionIntegersTo, Algebra.TensorProduct.lift_tmul, AlgHom.coe_comp,
+      Function.comp_apply, Algebra.ofId_apply, AlgHom.commutes,
+      Algebra.TensorProduct.algebraMap_apply, AlgHom.coe_restrictScalars',
+      IsScalarTower.coe_toAlgHom', ValuationSubring.algebraMap_apply,
+      Algebra.TensorProduct.includeRight_apply, Algebra.TensorProduct.tmul_mul_tmul, mul_one, one_mul,
+      adicCompletionComapAlgIso_tmul_apply, algebraMap_smul]
+    apply Subalgebra.smul_mem
+    show _ ≤ (1 : ℤₘ₀)
+    rw [v_adicCompletionComapAlgHom A K (L := L) (B := B) v i.1 i.2 y.1,
+      ← one_pow (Ideal.ramificationIdx (algebraMap A B) (comap A i.1).asIdeal i.1.asIdeal),
+      pow_le_pow_iff_left₀]
+    · exact y.2
+    · exact zero_le'
+    · exact zero_le'
+    · exact Ideal.IsDedekindDomain.ramificationIdx_ne_zero  ((Ideal.map_eq_bot_iff_of_injective
+        (algebraMap_injective_of_field_isFractionRing A B K L)).not.mpr
+        (comap A i.1).3) i.1.2 Ideal.map_comap_le
+  · rw [(tensorAdicCompletionIntegersTo A K L B v).map_add,
+      (adicCompletionTensorComapAlgHom A K L B v).map_add]
+    exact add_mem hx hy
+
+attribute [local instance] Algebra.TensorProduct.rightAlgebra in
+variable (v : HeightOneSpectrum A) in
+instance : TopologicalSpace (L ⊗[K] adicCompletion K v) := moduleTopology (adicCompletion K v) _
+
+attribute [local instance] Algebra.TensorProduct.rightAlgebra in
+variable (v : HeightOneSpectrum A) in
+instance : IsModuleTopology (adicCompletion K v) (L ⊗[K] adicCompletion K v) :=
+  ⟨rfl⟩
+
+attribute [local instance] Algebra.TensorProduct.rightAlgebra in
+noncomputable def adicCompletionTensorComapContinuousAlgHom (v : HeightOneSpectrum A) :
+    L ⊗[K] adicCompletion K v →A[L]
+      Π w : {w : HeightOneSpectrum B // v = comap A w}, adicCompletion L w.1 where
+  __ := adicCompletionTensorComapAlgHom A K L B v
+  cont := by
+    apply IsModuleTopology.continuous_of_ringHom (R := adicCompletion K v)
+    show Continuous (RingHom.comp _ (Algebra.TensorProduct.includeRight.toRingHom))
+    convert (adicCompletionContinuousComapAlgHom A K L B v).cont using 1
+    ext
+    simp [adicCompletionTensorComapAlgHom, adicCompletionContinuousComapAlgHom]
+
+noncomputable def adicCompletionComapAlgEquiv (v : HeightOneSpectrum A) :
+  (L ⊗[K] (HeightOneSpectrum.adicCompletion K v)) ≃ₐ[L]
+    (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1) :=
+  AlgEquiv.ofBijective (adicCompletionTensorComapAlgHom A K L B v) sorry --#231
+
+-- Can't state this properly because ≃[A]L doesn't exist yet -- #238
+noncomputable def adicCompletionComapContinuousAlgEquiv (v : HeightOneSpectrum A) :
+  sorry
+--  (L ⊗[K] (HeightOneSpectrum.adicCompletion K v)) ≃A[L]
+--    (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1)
+  := sorry
+
+theorem adicCompletionComapAlgEquiv_integral : ∃ S : Finset (HeightOneSpectrum A), ∀ v ∉ S,
+  AlgHom.range (((adicCompletionTensorComapAlgHom A K L B v).restrictScalars B).comp
+      (tensorAdicCompletionIntegersTo A K L B v)) =
+      Subalgebra.pi Set.univ (fun _ ↦ adicCompletionIntegersSubalgebra _ _) := sorry
 
 end IsDedekindDomain.HeightOneSpectrum
 
