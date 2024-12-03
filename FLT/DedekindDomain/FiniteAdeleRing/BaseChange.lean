@@ -28,7 +28,7 @@ variable [Algebra.IsSeparable K L]
 variable [IsDedekindDomain B]
 
 -- example : IsFractionRing B L := IsIntegralClosure.isFractionRing_of_finite_extension A K L B
-variable [IsFractionRing B L]
+variable [inst: IsFractionRing B L]
 
 -- example : IsDomain B := IsDomain.mk
 variable [IsDomain B]
@@ -201,17 +201,105 @@ open scoped TensorProduct -- ⊗ notation for tensor product
 noncomputable local instance : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
   (algebraMap L (ProdAdicCompletions B L)).comp (algebraMap K L)
 
--- These should be easy but I've just noticed that it should be an alghom
-noncomputable def ProdAdicCompletions.baseChange :
-    L ⊗[K] ProdAdicCompletions A K →ₗ[K] ProdAdicCompletions B L := TensorProduct.lift <| {
-  toFun := fun l ↦ {
-    toFun := fun kv w ↦ l • (adicCompletion_comap_algHom A K w (kv (comap A w)))
-    map_add' := sorry
-    map_smul' := sorry
-  }
-  map_add' := sorry
-  map_smul' := sorry
-}
+-- -- These should be easy but I've just noticed that it should be an alghom
+-- noncomputable def ProdAdicCompletions.baseChange :
+--     L ⊗[K] ProdAdicCompletions A K →ₗ[K] ProdAdicCompletions B L := TensorProduct.lift <| {
+--   toFun := fun l ↦ {
+--     toFun := fun kv w ↦ l • (adicCompletion_comap_algHom A K w (kv (comap A w)))
+--     map_add' := sorry
+--     map_smul' := sorry
+--   }
+--   map_add' := sorry
+--   map_smul' := sorry
+-- }
+--w in above is a prime ideal of
+
+-- #check AlgHom.mk'
+-- #check AlgHom.ofLinearMap
+-- #check AlgHom.map_add
+-- #check adicCompletion K (comap A _)
+-- #check adicCompletion_comap_algHom A K _
+-- #check map_smul
+-- #check mul_assoc
+-- #check AlgHom.commutes'
+-- #check AlgHom.commutes
+-- #check add_smul
+-- #check smul_assoc
+--#check HSMul K (ProdAdicCompletions A K) (ProdAdicCompletions A K)
+-- #check Algebra.smul_def
+ #check Pi.smul_apply
+-- #check adicCompletion_comap_algHom
+-- #check AlgHom.commutes
+-- #check MulActionHom.map_smul
+-- #check add_smul
+-- #check LinearMap.map_add
+-- #check TensorProduct.ext'
+-- #check TensorProduct.map_one
+-- #check TensorProduct.map
+#check LinearMap.smul_apply
+noncomputable def ProdAdicCompletions.baseChange' :
+    L ⊗[K] ProdAdicCompletions A K →ₐ[K] ProdAdicCompletions B L :=
+  AlgHom.ofLinearMap (TensorProduct.lift <| {
+    toFun := fun l ↦ {
+      toFun := fun kv u ↦ l • (adicCompletion_comap_algHom A K u (kv (comap A u)))
+      map_add' := by
+        intro x y
+        simp only
+        funext w
+        have : (x+y) (comap A w) = x (comap A w) + y (comap A w) := rfl
+        rw [this, map_add, smul_add]
+        rfl
+      map_smul' := by
+        intro m kv
+        simp only [RingHom.id_apply]
+        funext w
+        have h : (m • kv) (comap A w) = m • (kv (comap A w)) := by
+          -- why doesn't Pi.smul_apply close the goal
+          rw [← Pi.smul_apply m kv (comap A w), Algebra.smul_def, Algebra.smul_def]
+          rfl
+        rw [h]
+        have : (adicCompletion_comap_algHom A K w) (m • kv (comap A w)) =
+          m • (adicCompletion_comap_algHom A K w (L := L)) (kv (comap A w)) := by
+          --rw [← map_smul]
+          sorry
+        rw [this]
+        haveI : IsScalarTower K L (adicCompletion L w) := sorry
+        haveI : IsScalarTower L L (adicCompletion L w) := sorry
+        have : m • (adicCompletion_comap_algHom A K w) (kv (comap A w)) =
+          (m • (1 : L)) • (adicCompletion_comap_algHom A K w (L := L)) (kv (comap A w)) := by
+          rw [smul_assoc, one_smul]
+        rw [this, ← smul_assoc, smul_eq_mul, mul_comm, ← smul_eq_mul, smul_assoc, smul_assoc,
+          one_smul]
+        --(m • f) (w) = m • (f(w)), f(m•w)= m • f(w)
+        --have : m • l • (adicCompletion_comap_algHom A K w) (kv (comap A w)) =
+          --m • ((fun u ↦ l • (adicCompletion_comap_algHom A K u (L := L)) (kv (comap A u))) w) := sorry
+        --convert this using 1
+        convert (Pi.smul_apply m (fun u ↦ l • (adicCompletion_comap_algHom A K u (L:=L))
+          (kv (comap A u))) w) using 1
+        haveI : Algebra K <| ∀ v : HeightOneSpectrum B, v.adicCompletion L := sorry
+        unfold ProdAdicCompletions
+        rfl
+        rw [Algebra.smul_def, Algebra.smul_def m]
+    }
+    map_add' := by
+      intro x y
+      simp
+      have (w: HeightOneSpectrum B) : Module L (adicCompletion L w) := sorry
+      have (kv : ProdAdicCompletions A K) (w : HeightOneSpectrum B) := add_smul x y ((adicCompletion_comap_algHom A K w (L:=L)) (kv (comap A w)))
+      sorry
+    map_smul' := by
+      intro m l
+      --exact LinearMap.map_smul _ m
+      sorry
+  })
+  (map_one := by
+    rw [Algebra.TensorProduct.one_def]
+    sorry)
+  (map_mul := sorry)
+
+
+
+
 
 -- This is harder
 theorem ProdAdicCompletions.baseChange_surjective :
