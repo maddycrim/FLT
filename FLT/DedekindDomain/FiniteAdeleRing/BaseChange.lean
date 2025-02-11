@@ -410,14 +410,60 @@ noncomputable def ProdAdicCompletions.baseChange :
     dsimp only [algebraMap_apply']
     exact adicCompletionComapAlgHom_coe A K L B _ w _ r
 
+variable {R : Type*} [CommRing R]
+variable {ι : Type*}
+variable {N : ι → Type*} [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
+variable {M : Type*} [AddCommGroup M] [Module R M]
 
+-- def submodule (L : Type*) [AddCommGroup L] [Module R L] (K : Submodule R L) :  Submodule R (L ⊗[R] M) := sorry
+
+open DirectSum
+noncomputable def tensorProdEquiv [Module.Free R M] [Module.Finite R M]:
+  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) := by
+    sorry -- proof on directsumprod
+
+-- noncomputable def tensorProdEquiv' [Module.Free R M] [Module.Finite R M]:
+--   M ⊗[R] (∀ i, N i) ≃ₗ[R](∀ i, (⨁ i' : Module.Free.ChooseBasisIndex R M, N i)) := by
+--   sorry
+-- #check AlgEquiv.trans
 -- Note that this is only true because L/K is finite; in general tensor product doesn't
 -- commute with infinite products, but it does here.
+#check FiniteDimensional.fintypeBasisIndex
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
-    L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L :=
-  AlgEquiv.ofBijective
-  (Algebra.TensorProduct.lift (Algebra.ofId _ _)
-  (ProdAdicCompletions.baseChange A K L B) fun _ _ ↦ mul_comm _ _) sorry -- #239
+    L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L := by
+  have h₁:= tensorProdEquiv (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
+  -- have h₂:= tensorProdEquiv' (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
+  have h₃ (v: HeightOneSpectrum A) := adicCompletionComapAlgEquiv A K L B v
+  have h₄: (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1))
+    ≃ₐ[L] ProdAdicCompletions B L := by
+    sorry
+  have h₅:=  AlgEquiv.ofLinearEquiv h₁ (sorry) (sorry)
+  have h₆ : L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i) ≃ₐ[L]
+    (i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i := by
+    use h₅
+    · exact map_mul h₅
+    · exact h₅.toLinearEquiv.map_add
+    · intro r
+      rw [Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one]
+      rw [map_smul, AlgEquiv.map_one]
+
+      #exit
+      refine funext ?_
+      intro v
+      have : h₅ (r • 1) = fun i ↦ (r ⊗ₜ[K] 1 ) := by
+        rw [Algebra.TensorProduct.one_def]
+        rw [TensorProduct.smul_tmul']
+        simp only [smul_eq_mul, mul_one]
+        sorry
+
+      let a := (r ⊗ₜ[K] (1:adicCompletion K v))
+      have : (r • (1:(i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i)) v = (r ⊗ₜ[K] (1:adicCompletion K v)) := by
+        rw [Algebra.TensorProduct.one_def]
+  -- -- --consider adicCompletionComapAlgEquiv, since tensorprodequiv allows us to move prod outside we can apply this
+
+
+
+
 
 -- I am unclear about whether these next two sorries are in the right order.
 -- One direction of `baseChange_isFiniteAdele_iff` below (->) is easy, but perhaps the other way
