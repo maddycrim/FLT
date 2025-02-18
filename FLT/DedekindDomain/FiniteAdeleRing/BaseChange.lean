@@ -418,48 +418,81 @@ variable {M : Type*} [AddCommGroup M] [Module R M]
 -- def submodule (L : Type*) [AddCommGroup L] [Module R L] (K : Submodule R L) :  Submodule R (L ⊗[R] M) := sorry
 
 open DirectSum
-noncomputable def tensorProdEquiv [Module.Free R M] [Module.Finite R M]:
-  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) := by
-    sorry -- proof on directsumprod
 
--- noncomputable def tensorProdEquiv' [Module.Free R M] [Module.Finite R M]:
---   M ⊗[R] (∀ i, N i) ≃ₗ[R](∀ i, (⨁ i' : Module.Free.ChooseBasisIndex R M, N i)) := by
---   sorry
--- #check AlgEquiv.trans
--- Note that this is only true because L/K is finite; in general tensor product doesn't
--- commute with infinite products, but it does here.
-#check FiniteDimensional.fintypeBasisIndex
+noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
+   M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i)  := by
+   refine LinearEquiv.ofBijective (TensorProduct.lift <| {
+      toFun := fun m ↦ {
+        toFun := fun n i ↦ m ⊗ₜ[R] n i
+        map_add' := by
+          intro x y
+          ext i
+          simp only [add_apply, Pi.add_apply, map_add]
+          exact TensorProduct.tmul_add m (x i) (y i)
+        map_smul' := by
+          intro m n
+          ext i
+          simp only [Pi.smul_apply, TensorProduct.tmul_smul, TensorProduct.zero_tmul, smul_zero,
+          RingHom.id_apply]
+      }
+      map_add' := by
+        intro m₁ m₂
+        ext n i
+        simp only [add_apply, Pi.add_apply, map_add]
+        exact TensorProduct.add_tmul m₁ m₂ (n i)
+      map_smul' := by
+        intro r m
+        ext n i
+        simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
+          Pi.smul_apply]
+        rfl
+        }
+    ) ⟨?_, ?_⟩
+   · apply (injective_iff_map_eq_zero' _).mpr
+     intro a
+     constructor
+     · intro h
+       --unfold TensorProduct.lift at h
+       sorry
+     sorry
+   · sorry
+
+#check LinearEquiv.toLinearMap
+#check Algebra.TensorProduct.lift
+#check Algebra.TensorProduct.algHomOfLinearMapTensorProduct (LinearEquiv.toLinearMap (tensorProdbilinear (R:=K) (M := L)
+      (N:= (adicCompletion K (R:= A)))))
+#check (LinearEquiv.toLinearMap (tensorProdbilinear (R:=K) (M := L)
+      (N:= (adicCompletion K (R:= A))))).map_mul_iff (R:= K)
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
     L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L := by
-  have h₁:= tensorProdEquiv (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
-  -- have h₂:= tensorProdEquiv' (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
   have h₃ (v: HeightOneSpectrum A) := adicCompletionComapAlgEquiv A K L B v
   have h₄: (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1))
     ≃ₐ[L] ProdAdicCompletions B L := by
     sorry
-  have h₅:=  AlgEquiv.ofLinearEquiv h₁ (sorry) (sorry)
   have h₆ : L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i) ≃ₐ[L]
     (i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i := by
-    use h₅
-    · exact map_mul h₅
-    · exact h₅.toLinearEquiv.map_add
+    use tensorProdbilinear (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
+    letI : SMulCommClass K ((i : HeightOneSpectrum A) → adicCompletion K i)
+      ((i : HeightOneSpectrum A) → adicCompletion K i) := by
+      apply?
+    letI : NonUnitalSemiring (L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i)) := by
+      exact Algebra.TensorProduct.instNonUnitalSemiring
+
+    · sorry
+    · exact tensorProdbilinear.map_add
     · intro r
       rw [Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one]
-      rw [map_smul, AlgEquiv.map_one]
-
-      #exit
+      rw [Algebra.TensorProduct.one_def]
+      rw [TensorProduct.smul_tmul']
+      simp only [smul_eq_mul, mul_one]
+      simp only [Equiv.toFun_as_coe, EquivLike.coe_coe]
       refine funext ?_
       intro v
-      have : h₅ (r • 1) = fun i ↦ (r ⊗ₜ[K] 1 ) := by
-        rw [Algebra.TensorProduct.one_def]
-        rw [TensorProduct.smul_tmul']
-        simp only [smul_eq_mul, mul_one]
-        sorry
-
-      let a := (r ⊗ₜ[K] (1:adicCompletion K v))
-      have : (r • (1:(i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i)) v = (r ⊗ₜ[K] (1:adicCompletion K v)) := by
-        rw [Algebra.TensorProduct.one_def]
-  -- -- --consider adicCompletionComapAlgEquiv, since tensorprodequiv allows us to move prod outside we can apply this
+      haveI (i : HeightOneSpectrum A) := AddCommMonoid (adicCompletion K i)
+      have : tensorProdbilinear (r ⊗ₜ[K] 1) v = (r ⊗ₜ[K] (1: adicCompletion K v)) := rfl
+      rw [this, ← mul_one r, ← smul_eq_mul, ← TensorProduct.smul_tmul',
+        ← Algebra.TensorProduct.one_def]
+      simp only [smul_eq_mul, mul_one, Pi.smul_apply, Pi.one_apply]
 
 
 
