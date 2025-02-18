@@ -456,7 +456,9 @@ noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
        sorry
      sorry
    · sorry
-
+#check Algebra.TensorProduct.productLeftAlgHom
+set_option maxHeartbeats 500000
+#check Algebra.ofId L L
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
     L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L := by
   --can I get around constructing an explicit map?
@@ -480,11 +482,18 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
     map_add' := fun x y ↦ rfl
     commutes' := fun r ↦ rfl
    }
+  let map :=  Algebra.TensorProduct.algEquivOfLinearEquivTensorProduct (tensorProdbilinear (R:=K) (M := L) (N:= (adicCompletion K (R:= A))))
+    (by
+    intro l₁ l₂ k₁ k₂
+    dsimp [tensorProdbilinear]
+    ext i
+    rw [← Algebra.TensorProduct.tmul_mul_tmul]
+    rfl) (by dsimp [tensorProdbilinear]; rfl)
   have h₆ : L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i) ≃ₐ[L]
     (i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i := by
-    use tensorProdbilinear (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
-    · sorry
-    · exact tensorProdbilinear.map_add
+    use map
+    · exact map_mul map
+    · exact map_add map
     · intro r
       rw [Algebra.algebraMap_eq_smul_one, Algebra.algebraMap_eq_smul_one]
       rw [Algebra.TensorProduct.one_def]
@@ -494,7 +503,11 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
       refine funext ?_
       intro v
       haveI (i : HeightOneSpectrum A) := AddCommMonoid (adicCompletion K i)
-      have : tensorProdbilinear (r ⊗ₜ[K] 1) v = (r ⊗ₜ[K] (1: adicCompletion K v)) := rfl
+      -- unfold map
+      have : map (r ⊗ₜ[K] 1) v = (r ⊗ₜ[K] (1: adicCompletion K v)) := by
+        unfold map
+        simp only [Algebra.TensorProduct.algEquivOfLinearEquivTensorProduct_apply]
+        rfl
       rw [this, ← mul_one r, ← smul_eq_mul, ← TensorProduct.smul_tmul',
         ← Algebra.TensorProduct.one_def]
       simp only [smul_eq_mul, mul_one, Pi.smul_apply, Pi.one_apply]
@@ -512,7 +525,7 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
     --   (N:= (adicCompletion K (R:= A))))).map_mul_iff (R:= K)
 
 
-     #exit
+
 
 
 
