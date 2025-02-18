@@ -457,27 +457,32 @@ noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
      sorry
    · sorry
 
-#check LinearEquiv.toLinearMap
-#check Algebra.TensorProduct.lift
-#check Algebra.TensorProduct.algHomOfLinearMapTensorProduct (LinearEquiv.toLinearMap (tensorProdbilinear (R:=K) (M := L)
-      (N:= (adicCompletion K (R:= A)))))
-#check (LinearEquiv.toLinearMap (tensorProdbilinear (R:=K) (M := L)
-      (N:= (adicCompletion K (R:= A))))).map_mul_iff (R:= K)
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
     L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L := by
-  have h₃ (v: HeightOneSpectrum A) := adicCompletionComapAlgEquiv A K L B v
+  --can I get around constructing an explicit map?
   have h₄: (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1))
-    ≃ₐ[L] ProdAdicCompletions B L := by
-    sorry
+    ≃ₐ[L] ProdAdicCompletions B L :=
+    {
+    toFun := fun f w ↦ f (comap A w) ⟨w, rfl⟩
+    invFun := fun g v w ↦ g w
+    -- better way to prove left_inv?
+    left_inv := fun f ↦ by
+      ext v w₁
+      simp
+      congr
+      exact w₁.2.symm
+      ext w₂
+      refine Eq.congr ?_ rfl
+      exact w₁.2.symm
+      exact proof_irrel_heq rfl w₁.property
+    right_inv := fun g ↦ rfl
+    map_mul' := fun x y ↦ rfl
+    map_add' := fun x y ↦ rfl
+    commutes' := fun r ↦ rfl
+   }
   have h₆ : L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i) ≃ₐ[L]
     (i : HeightOneSpectrum A) → L ⊗[K] adicCompletion K i := by
     use tensorProdbilinear (R:=K) (M := L) (N:= (adicCompletion K (R:= A)))
-    letI : SMulCommClass K ((i : HeightOneSpectrum A) → adicCompletion K i)
-      ((i : HeightOneSpectrum A) → adicCompletion K i) := by
-      apply?
-    letI : NonUnitalSemiring (L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i)) := by
-      exact Algebra.TensorProduct.instNonUnitalSemiring
-
     · sorry
     · exact tensorProdbilinear.map_add
     · intro r
@@ -494,6 +499,20 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
         ← Algebra.TensorProduct.one_def]
       simp only [smul_eq_mul, mul_one, Pi.smul_apply, Pi.one_apply]
 
+  have h₇ : ((v : HeightOneSpectrum A) → L ⊗[K] adicCompletion K v )≃ₐ[L]
+    (v: HeightOneSpectrum A) → (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1) :=
+    AlgEquiv.piCongrRight (fun (v: HeightOneSpectrum A) ↦ adicCompletionComapAlgEquiv A K L B v)
+  exact (h₆.trans h₇).trans h₄
+    -- letI : SMulCommClass K ((i : HeightOneSpectrum A) → adicCompletion K i)
+    --   ((i : HeightOneSpectrum A) → adicCompletion K i) := by
+    --   exact Pi.smulCommClass'
+    -- letI : NonUnitalSemiring (L ⊗[K] ((i : HeightOneSpectrum A) → adicCompletion K i)) := by
+    --   exact Algebra.TensorProduct.instNonUnitalSemiring
+    -- have :=(LinearEquiv.toLinearMap (tensorProdbilinear (R:=K) (M := L)
+    --   (N:= (adicCompletion K (R:= A))))).map_mul_iff (R:= K)
+
+
+     #exit
 
 
 
