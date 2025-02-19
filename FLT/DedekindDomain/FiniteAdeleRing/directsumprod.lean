@@ -193,12 +193,13 @@ noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
 
 variable (R M N)
 noncomputable def h₁ [Module.Free R M] [Module.Finite R M]:  M ⊗[R] (∀ i, N i) ≃ₗ[R]  ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
-      TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
+  TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
 
 
 #check finsuppTensorFinsupp
-#check linearEquivFunOnFintype
+#check linearEquivFunOnFintype 
 open TensorProduct
+
 noncomputable def h₂ [Module.Free R M] [Module.Finite R M] : ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i)
   ≃ₗ[R] ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
   finsuppScalarLeft R (∀i, N i) (Module.Free.ChooseBasisIndex R M) ≪≫ₗ
@@ -212,7 +213,25 @@ noncomputable def h₃ [Module.Free R M] [Module.Finite R M] : (∀i, ( Module.F
   exact LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm) )
 
 variable [DecidableEq ι]
+/--
+R^k ⨂ ∏ Ni ≅ M ⨂ ∏ Ni
+↓≃
+∏ (R^k ⨂ Ni) ≃ ∏ (M ⨂ Ni)
+-/
 
+noncomputable def tensorProdbilinear_map [Module.Free R M] [Module.Finite R M] :
+  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
+  (h₁ R M N) ≪≫ₗ (h₂ R M N) ≪≫ₗ (h₃ R M N)
+
+noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M] 
+  (m : M) (n : ∀ i, N i) :
+  tensorProdbilinear_map R M N (m ⊗ₜ n) = 
+  fun i ↦ (m ⊗ₜ n i) := by
+  dsimp [tensorProdbilinear_map]
+  dsimp [h₁]
+  dsimp [h₂]
+  ext i
+  
 
 noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
    M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i)  := by
