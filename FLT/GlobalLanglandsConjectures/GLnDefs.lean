@@ -85,13 +85,13 @@ lemma FiniteAdeleRing.clear_denominator (a : FiniteAdeleRing R K) :
     ∃ (b : R⁰) (c : R_hat R K), a * (b : R) = c := by
   exact mul_nonZeroDivisor_mem_finiteIntegralAdeles a
 
-#check Classical.choose (v.valuation_exists_uniformizer K)
+--#check Classical.choose (v.valuation_exists_uniformizer K)
 
 -- These instances are sorry-free in the PR.
 instance : TopologicalSpace (FiniteAdeleRing ℤ ℚ) := sorry
 
 
-instance instTopologicalRingFiniteAdeleRing : TopologicalRing (FiniteAdeleRing ℤ ℚ) := sorry
+instance instTopologicalRingFiniteAdeleRing : IsTopologicalRing (FiniteAdeleRing ℤ ℚ) := sorry
 
 end PR13703
 
@@ -166,7 +166,7 @@ variable (n : ℕ)
 variable (G : Type) [TopologicalSpace G] [Group G]
   (E : Type) [NormedAddCommGroup E] [NormedSpace ℝ E]
   [ChartedSpace E G]
-  [LieGroup 𝓘(ℝ, E) G]
+  [LieGroup 𝓘(ℝ, E) ⊤ G]
 
 def action :
     LeftInvariantDerivation 𝓘(ℝ, E) G →ₗ⁅ℝ⁆ (Module.End ℝ C^∞⟮𝓘(ℝ, E), G; ℝ⟯) where
@@ -272,7 +272,7 @@ structure IsSlowlyIncreasing (f : GeneralLinearGroup (Fin n) ℝ → ℂ) : Prop
     ‖f M‖ ≤ C * (s (M : Matrix (Fin n) (Fin n) ℝ)) ^ N
 
 --
-#check Matrix.orthogonalGroup (Fin n) ℝ
+--#check Matrix.orthogonalGroup (Fin n) ℝ
 
 structure preweight (n : ℕ) where
   d : ℕ -- dimension
@@ -284,8 +284,8 @@ open CategoryTheory
 noncomputable def preweight.fdRep (n : ℕ) (w : preweight n) :
     FDRep ℂ (orthogonalGroup (Fin n) ℝ) where
   V := FGModuleCat.of ℂ (Fin w.d → ℂ)
-  ρ := {
-    toFun := fun A ↦ {
+  ρ := MonCat.ofHom {
+    toFun := fun A ↦ ModuleCat.ofHom {
       toFun := fun x ↦ (w.rho A).1 *ᵥ x
       map_add' := fun _ _ ↦ Matrix.mulVec_add ..
       map_smul' := fun _ _ ↦ by simpa using Matrix.mulVec_smul .. }
