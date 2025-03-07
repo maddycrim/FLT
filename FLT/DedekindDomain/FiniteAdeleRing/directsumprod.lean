@@ -1,6 +1,8 @@
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 
+
+
 section
 variable {ι' : Type*}
 variable {R ι: Type*} {M N : ι → ι' → Type*} [CommRing R] [∀i i', AddCommGroup (M i i')]
@@ -11,9 +13,10 @@ open DirectSum
 def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
   toFun nm i := ∑i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
   map_add' x y := by
-    ext
     simp only [add_apply, Pi.add_apply, map_add]
-    rw [← Finset.sum_add_distrib]
+    ext i
+    rw [Finset.sum_add_distrib]
+    rfl
   map_smul' r nm := by
     ext i
     simp only [RingHom.id_apply, Pi.smul_apply]
@@ -33,8 +36,9 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     · simp [of_eq_of_ne _ _ _ h]
   right_inv nm := by
     simp only
-    ext i
-    convert sum_univ_of (x:= nm i) with j _ i
+    refine funext ?_
+    intro i
+    convert sum_univ_of (x := nm i) with j _ i
     conv_rhs => rw [← DirectSum.sum_univ_of (nm i)]
     rw [DFinsupp.finset_sum_apply, DFinsupp.finset_sum_apply, Finset.sum_apply]
     congr with k
@@ -98,66 +102,21 @@ noncomputable def sumCongrRight [Fintype ι] [DecidableEq ι] (e : (i : ι) → 
 section
 
 open DirectSum
-variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
+{N : ι → Type*} [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
 
-#check DirectSum.linearEquivFunOnFintype R
-#check Module.Free.ChooseBasisIndex.fintype
+-- #check DirectSum.linearEquivFunOnFintype R
+-- #check Module.Free.ChooseBasisIndex.fintype
 
-noncomputable def finite_free_module_iso_direct_sum
-[Module.Free R M] [hM_fin : Module.Finite R M] :
-M ≃ₗ[R] (⨁ i : Module.Free.ChooseBasisIndex R M, R) := by
-  have h₁: M ≃ₗ[R] ((Module.Free.ChooseBasisIndex R M → R)) := Basis.equivFun (Module.Free.chooseBasis R M)
-  have h₂: (⨁ i : Module.Free.ChooseBasisIndex R M, R) ≃ₗ[R] ((Module.Free.ChooseBasisIndex R M → R)) := by
-    exact linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) fun i ↦ R
-  exact LinearEquiv.trans h₁ h₂.symm
+-- noncomputable def finite_free_module_iso_direct_sum
+-- [Module.Free R M] [hM_fin : Module.Finite R M] :
+-- M ≃ₗ[R] (⨁ i : Module.Free.ChooseBasisIndex R M, R) := by
+--   have h₁: M ≃ₗ[R] ((Module.Free.ChooseBasisIndex R M → R)) := Basis.equivFun (Module.Free.chooseBasis R M)
+--   have h₂: (⨁ i : Module.Free.ChooseBasisIndex R M, R) ≃ₗ[R] ((Module.Free.ChooseBasisIndex R M → R)) := by
+--     exact linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) fun i ↦ R
+--   exact LinearEquiv.trans h₁ h₂.symm
 
 open scoped TensorProduct
-variable {ι : Type*}
-variable {N : ι → Type*} [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
-
--- initial proof of isomorphism, this requires proving a series of isomorphisms which is difficult to
---break down in the proof I need
--- noncomputable def tensorProdEquiv [Module.Free R M] [Module.Finite R M]:
---   M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) := by
---   have h₁ :  M ⊗[R] (∀ i, N i) ≃ₗ[R]  (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] (∀i, N i) :=
---     TensorProduct.congr finite_free_module_iso_direct_sum (LinearEquiv.refl R ((i : ι) → N i))
---   have h₂: (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] (∀i, N i) ≃ₗ[R]
---     ⨁ i' : (Module.Free.ChooseBasisIndex R M), R ⊗[R] (∀i, N i) := by
---     apply TensorProduct.directSumLeft
---   have h₃: (⨁ i' : (Module.Free.ChooseBasisIndex R M), (∀i, N i)) ≃ₗ[R]
---     ⨁ i' : (Module.Free.ChooseBasisIndex R M), R ⊗[R] (∀i, N i) := by
---    have := fun (i': (Module.Free.ChooseBasisIndex R M)) ↦ TensorProduct.lid R ((i : ι) → N i)
---    have h₁:= LinearEquiv.piCongrRight (this)
---    have h₂:= linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) (fun i' ↦ (R ⊗[R] ∀i, N i))
---    have h₃:= linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) (fun i' ↦ (∀i, N i))
---    have h₄:= LinearEquiv.trans h₂ h₁
---    exact (LinearEquiv.trans h₄ h₃.symm).symm
---   let a:= ∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, N i)
---   have h₄: (⨁ (i' : Module.Free.ChooseBasisIndex R M), (i : ι) → N i) ≃ₗ[R] ∀i, ⨁ i' : Module.Free.ChooseBasisIndex R M, N i := by
---     exact proddirectsum' --(ι':= Module.Free.ChooseBasisIndex R M)--why does this work even though N isn't double indexed?
---   have h₅: (∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, N i)) ≃ₗ[R] ∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, R ⊗[R] N i) := by
---     have (i: ι):= fun (i': (Module.Free.ChooseBasisIndex R M)) ↦ TensorProduct.lid R (N i)
---     have h₁ (i: ι):= LinearEquiv.piCongrRight (this i)
---     have h₂ (i: ι):= linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) (fun i' ↦ (R ⊗[R] N i))
---     have h₃ (i :ι):= linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) (fun i' ↦ ( N i))
---     have h₄ (i: ι):= LinearEquiv.trans (h₂ i) (h₁ i)
---     have h₅ (i: ι):= (LinearEquiv.trans (h₄ i) (h₃ i).symm).symm
---     exact LinearEquiv.piCongrRight h₅
---   have h₆ : (∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, R ⊗[R] N i)) ≃ₗ[R] ∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] N i := by
---     have (i: ι): (⨁ i' : Module.Free.ChooseBasisIndex R M, R ⊗[R] N i) ≃ₗ[R] (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] N i := by
---       exact (TensorProduct.directSumLeft R (fun i₁ ↦ R) (N i)).symm
---     exact LinearEquiv.piCongrRight this
---   have h₇ : (∀i, (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i) := by
---     have (i: ι): (⨁ i' : Module.Free.ChooseBasisIndex R M, R) ⊗[R] N i  ≃ₗ[R]  M ⊗[R] N i := by
---       exact LinearEquiv.rTensor (N i) (finite_free_module_iso_direct_sum.symm)
---     exact LinearEquiv.piCongrRight this
---   have g₁:= LinearEquiv.trans h₁ h₂
---   have g₂ := LinearEquiv.trans g₁ h₃.symm
---   have g₃ := LinearEquiv.trans g₂ h₄
---   have g₄ := LinearEquiv.trans g₃ h₅
---   have g₅ := LinearEquiv.trans g₄ h₆
---   exact LinearEquiv.trans g₅ h₇
-
 
 
 noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
@@ -191,51 +150,99 @@ noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
 
 
 
+
+open TensorProduct
 variable (R M N)
-noncomputable def h₁ [Module.Free R M] [Module.Finite R M]:  M ⊗[R] (∀ i, N i) ≃ₗ[R]  ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
+noncomputable def moduleTensorProdEquiv [Module.Free R M] [Module.Finite R M] :
+    M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
   TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
 
-
-#check finsuppTensorFinsupp
-#check linearEquivFunOnFintype 
-open TensorProduct
-
-noncomputable def h₂ [Module.Free R M] [Module.Finite R M] : ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i)
-  ≃ₗ[R] ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
+noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M] :
+    (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) ≃ₗ[R]
+      ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
   finsuppScalarLeft R (∀i, N i) (Module.Free.ChooseBasisIndex R M) ≪≫ₗ
     (finsuppLEquivDirectSum R (∀i, N i) (Module.Free.ChooseBasisIndex R M)) ≪≫ₗ
     proddirectsum'  ≪≫ₗ
-    LinearEquiv.piCongrRight (fun i ↦(finsuppLEquivDirectSum R (N i) (Module.Free.ChooseBasisIndex R M)).symm)
+    LinearEquiv.piCongrRight (fun i ↦(finsuppLEquivDirectSum R (N i)
+    (Module.Free.ChooseBasisIndex R M)).symm)
     ≪≫ₗ  LinearEquiv.piCongrRight (fun i ↦
      (finsuppScalarLeft R (N i) (Module.Free.ChooseBasisIndex R M)).symm)
 
-noncomputable def h₃ [Module.Free R M] [Module.Finite R M] : (∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i )≃ₗ[R] ∀i, (M ⊗[R] N i):= by
-  exact LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm) )
-
-variable [DecidableEq ι]
-/--
-R^k ⨂ ∏ Ni ≅ M ⨂ ∏ Ni
-↓≃
-∏ (R^k ⨂ Ni) ≃ ∏ (M ⨂ Ni)
--/
+noncomputable def prodTensorEquiv [Module.Free R M] [Module.Finite R M] :
+  (∀i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i):=
+  LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm))
 
 noncomputable def tensorProdbilinear_map [Module.Free R M] [Module.Finite R M] :
   M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
-  (h₁ R M N) ≪≫ₗ (h₂ R M N) ≪≫ₗ (h₃ R M N)
+  (moduleTensorProdEquiv R M N) ≪≫ₗ (TensorProdEquivProdTensor R M N) ≪≫ₗ (prodTensorEquiv R M N)
 
-noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M] 
+noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M]
   (m : M) (n : ∀ i, N i) :
-  tensorProdbilinear_map R M N (m ⊗ₜ n) = 
+  tensorProdbilinear_map R M N (m ⊗ₜ n) =
   fun i ↦ (m ⊗ₜ n i) := by
-  dsimp [tensorProdbilinear_map]
-  dsimp [h₁]
-  dsimp [h₂]
-  ext i
-  
+  unfold tensorProdbilinear_map
+  simp [moduleTensorProdEquiv]
+  -- the goal now mentions `(Module.Free.repr R M) m` which has type `(some set) →₀ R`
+  -- i.e. `Finsupp`, so we can (rather inelegantly) change the goal so that it
+  -- doesn't mention m at all and only mentions `m'`, this finitely-supported function.
+  let m' := (Module.Free.repr R M) m
+  have hm' : (Module.Free.repr R M).symm m' = m := by simp [m']
+  rw [← hm']
+  simp
+  -- Now the goal only has m' not m so we can apply an induction principle
+  induction m' using Finsupp.induction_linear
+  · -- goal true for zero function
+    ext
+    simp
+  · -- goal preserved under addition
+    ext i
+    simp_all [add_tmul]
+  · -- what's left: goal is true for functions supported at one place
+    rename_i j r
+    -- STP for m' the function sending j to r and everything else to 0
+    -- randomly move an equiv to the other side out of hope more
+    -- than anything else
+    rw [← LinearEquiv.eq_symm_apply]
+    simp [prodTensorEquiv]
+    ext i
+    simp
+    -- we are surely close!
+    -- ⊢ (TensorProdEquivProdTensor R M N) (Finsupp.single j r ⊗ₜ[R] n) i = Finsupp.single j r ⊗ₜ[R] n i
+    -- Kevin got here
+    rw [TensorProdEquivProdTensor]
+    simp only [LinearEquiv.trans_apply, LinearEquiv.piCongrRight_apply]
+    rw [LinearEquiv.symm_apply_eq]
+    ext k
+    rw [finsuppScalarLeft_apply, LinearMap.rTensor_tmul, Finsupp.lapply_apply, TensorProduct.lid_tmul]
+    rw [Finsupp.single_apply, ite_smul, zero_smul, ← Finsupp.single_apply]
+    apply congrFun
+    apply congrArg
+    clear k hm' m' m
+    rw [LinearEquiv.symm_apply_eq]
+    rw [finsuppLEquivDirectSum_single]
+    rw [finsuppScalarLeft_apply_tmul, Finsupp.sum_single_index (by simp)]
+    rw [finsuppLEquivDirectSum_single]
+    rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of]
+    rw [proddirectsum']
+    simp_rw [← LinearEquiv.toFun_eq_coe]
+    conv_lhs =>
+      enter [2, x]
+      rw [DirectSum.of_apply]
+      simp only [Eq.recOn.eq_def, eq_rec_constant, dif_eq_if]
+      rw [ite_apply, Pi.zero_apply, Pi.smul_apply, apply_ite (DFunLike.coe _), AddMonoidHom.map_zero]
+    apply Fintype.sum_dite_eq
 
-noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
-   M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i)  := by
-   refine LinearEquiv.ofBijective (TensorProduct.lift <| {
+#check LinearMap.single
+#check LinearMap.proj
+noncomputable def tensorProdbilinear_map_apply' [Module.Free R M] [Module.Finite R M]
+  (m : M) (n : ∀ i, N i) (i : ι):
+  tensorProdbilinear_map R M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
+  rw [tensorProdbilinear_map_apply]
+
+variable [DecidableEq ι]
+noncomputable def tensorProdbilinear_map' [Module.Free R M] [Module.Finite R M] :
+  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
+  {TensorProduct.lift <| {
       toFun := fun m ↦ {
         toFun := fun n i ↦ m ⊗ₜ[R] n i
         map_add' := by
@@ -260,76 +267,172 @@ noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
         simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
           Pi.smul_apply]
         rfl
-        }
-    ) ⟨?_, ?_⟩
-   · apply (injective_iff_map_eq_zero' _).mpr
-     intro a
-     constructor
-     · intro h
-       obtain ⟨b, hb⟩ := LinearEquiv.surjective ((h₁ R M N).symm) a
-       rw [← hb]
-       have : LinearMap.lcomp R _ (h₁ R M N).symm (tensorProdbilinear' (R:=R) (M:=M) (N:=N))
-        (M:= (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] ((i : ι) → N i)) =
-        LinearMap.lcomp R ((i : ι) → M ⊗[R] N i) (h₂ R M N) (h₃ R M N)
-        (M:= (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] ((i : ι) → N i))
-        (Nₗ := (i : ι) → ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) := by
-        apply TensorProduct.AlgebraTensorModule.ext
-        intro x y
-        simp only [LinearMap.lcomp_apply, LinearEquiv.coe_coe]
-        have : ((h₂ R M N) (x ⊗ₜ[R] y)) = (fun i ↦ (x ⊗ₜ[R] y i)) := by
-          unfold h₂
-          simp only [LinearEquiv.trans_apply]
-          rw [finsuppScalarLeft_apply_tmul, Finsupp.sum, map_sum]
-          simp only [finsuppLEquivDirectSum_single]
-          unfold proddirectsum'
-          simp only [LinearEquiv.coe_mk]
-          sorry
+        } with
+   invFun  :=  fun x ↦ (fun i ↦ x i) ↦ ((map LinearMap.id (LinearMap.single R N i)).comp
+      (LinearMap.proj i (φ := fun i ↦ (M ⊗[R] N i)) (R:=R)) x)
+   left_inv := sorry
+   right_inv := sorry
+  }
+variable {M' : Type*}[AddCommGroup M'] [Module R M'] [DecidableEq ι]
+noncomputable def comm' : M ⊗[R] M' ≃ₗ[R] M' ⊗[R] M :=
+  LinearEquiv.ofLinear (lift (mk R M' M).flip) (lift (mk R M M').flip) (ext' fun _ _ => rfl)
+     (ext' fun _ _ => rfl)
+-- #check DFinsupp.finset_sum_apply
+-- #check Finset.sum_eq_single
+-- noncomputable def tensorProdbilinear [Module.Free R M] [Module.Finite R M]:
+--    M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i)  := by
+--    refine LinearEquiv.ofBijective (TensorProduct.lift <| {
+--       toFun := fun m ↦ {
+--         toFun := fun n i ↦ m ⊗ₜ[R] n i
+--         map_add' := by
+--           intro x y
+--           ext i
+--           simp only [add_apply, Pi.add_apply, map_add]
+--           exact TensorProduct.tmul_add m (x i) (y i)
+--         map_smul' := by
+--           intro m n
+--           ext i
+--           simp only [Pi.smul_apply, TensorProduct.tmul_smul, TensorProduct.zero_tmul, smul_zero,
+--           RingHom.id_apply]
+--       }
+--       map_add' := by
+--         intro m₁ m₂
+--         ext n i
+--         simp only [add_apply, Pi.add_apply, map_add]
+--         exact TensorProduct.add_tmul m₁ m₂ (n i)
+--       map_smul' := by
+--         intro r m
+--         ext n i
+--         simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
+--           Pi.smul_apply]
+--         rfl
+--         }
+--     ) ⟨?_, ?_⟩
+--    · apply (injective_iff_map_eq_zero' _).mpr
+--      intro a
+--      constructor
+--      · intro h
+--        obtain ⟨b, hb⟩ := LinearEquiv.surjective ((h₁ R M N).symm) a
+--        rw [← hb]
+--        have : LinearMap.lcomp R _ (h₁ R M N).symm (tensorProdbilinear' (R:=R) (M:=M) (N:=N))
+--         (M:= (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] ((i : ι) → N i)) =
+--         LinearMap.lcomp R ((i : ι) → M ⊗[R] N i) (h₂ R M N) (h₃ R M N)
+--         (M:= (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] ((i : ι) → N i))
+--         (Nₗ := (i : ι) → ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) := by
+--         apply TensorProduct.AlgebraTensorModule.ext
+--         intro x y
+--         simp only [LinearMap.lcomp_apply, LinearEquiv.coe_coe]
+--         have : ((h₂ R M N) (x ⊗ₜ[R] y)) = (fun i ↦ (x ⊗ₜ[R] y i)) := by
+--           unfold h₂
+--           simp only [LinearEquiv.trans_apply]
+--           rw [finsuppScalarLeft_apply_tmul, Finsupp.sum, map_sum]
+--           simp only [finsuppLEquivDirectSum_single]
+--           unfold proddirectsum'
+--           simp only [LinearEquiv.coe_mk]
+--           sorry
 
-        -- unfold h₂ h₃ tensorProdbilinear' h₁
-        -- simp only [congr_symm_tmul, LinearEquiv.refl_symm, LinearEquiv.refl_apply, lift.tmul,
-        --   LinearMap.coe_mk, AddHom.coe_mk, LinearEquiv.trans_apply]
-        -- refine funext ?_
-        -- intro i
-        -- simp only [LinearEquiv.piCongrRight_apply]
-        -- rw [finsuppScalarLeft_apply_tmul, Finsupp.sum, map_sum]
-        -- simp only [finsuppLEquivDirectSum_single]
-        -- unfold proddirectsum'
-        -- simp only [LinearEquiv.coe_mk]
-        -- have : (∑ x_1 : Module.Free.ChooseBasisIndex R M,
-        --   (of (fun i' ↦ N i) x_1)
-        --     ((∑ x_2 ∈ x.support, (lof R (Module.Free.ChooseBasisIndex R M)
-        --      (fun i ↦ (i : ι) → N i) x_2) (x x_2 • y)) x_1
-        --       i)) = ∑ x_1 : Module.Free.ChooseBasisIndex R M,
-        --   (of (fun i' ↦ N i) x_1) (x x_1 • y i) := by
-        --   apply Finset.sum_congr
-        --   rfl
-        --   intro i' hi'
-        --   apply (Function.Injective.eq_iff (DirectSum.of_injective i')).mpr
-        --   rw [DFinsupp.finset_sum_apply, Finset.sum_eq_single i']
-        --   rw [lof_apply R i' (x i' • y) (M := fun (j:Module.Free.ChooseBasisIndex R M) ↦ (∀i, N i))]
-        --   rfl
-        --   intro j hj hj'
-        --   rw [lof_eq_of]
-        --   exact of_eq_of_ne j i' (x j • y) hj' (β := (fun i ↦ (i : ι) → N i) )
-        --   intro hi''
-        --   rw [Finsupp.not_mem_support_iff.mp, zero_smul]
-        --   exact lof_apply R i' 0
-        --   exact hi''
-        -- rw [this]
-        -- simp?
-        -- unfold finsuppLEquivDirectSum
-        -- simp only [ne_eq]
-        -- haveI (i : ι) : DecidableEq (N i) := Classical.decEq (N i)
+--         -- unfold h₂ h₃ tensorProdbilinear' h₁
+--         -- simp only [congr_symm_tmul, LinearEquiv.refl_symm, LinearEquiv.refl_apply, lift.tmul,
+--         --   LinearMap.coe_mk, AddHom.coe_mk, LinearEquiv.trans_apply]
+--         -- refine funext ?_
+--         -- intro i
+--         -- simp only [LinearEquiv.piCongrRight_apply]
+--         -- rw [finsuppScalarLeft_apply_tmul, Finsupp.sum, map_sum]
+--         -- simp only [finsuppLEquivDirectSum_single]
+--         -- unfold proddirectsum'
+--         -- simp only [LinearEquiv.coe_mk]
+--         -- have : (∑ x_1 : Module.Free.ChooseBasisIndex R M,
+--         --   (of (fun i' ↦ N i) x_1)
+--         --     ((∑ x_2 ∈ x.support, (lof R (Module.Free.ChooseBasisIndex R M)
+--         --      (fun i ↦ (i : ι) → N i) x_2) (x x_2 • y)) x_1
+--         --       i)) = ∑ x_1 : Module.Free.ChooseBasisIndex R M,
+--         --   (of (fun i' ↦ N i) x_1) (x x_1 • y i) := by
+--         --   apply Finset.sum_congr
+--         --   rfl
+--         --   intro i' hi'
+--         --   apply (Function.Injective.eq_iff (DirectSum.of_injective i')).mpr
+--         --   rw [DFinsupp.finset_sum_apply, Finset.sum_eq_single i']
+--         --   rw [lof_apply R i' (x i' • y) (M := fun (j:Module.Free.ChooseBasisIndex R M) ↦ (∀i, N i))]
+--         --   rfl
+--         --   intro j hj hj'
+--         --   rw [lof_eq_of]
+--         --   exact of_eq_of_ne j i' (x j • y) hj' (β := (fun i ↦ (i : ι) → N i) )
+--         --   intro hi''
+--         --   rw [Finsupp.not_mem_support_iff.mp, zero_smul]
+--         --   exact lof_apply R i' 0
+--         --   exact hi''
+--         -- rw [this]
+--         -- simp?
+--         -- unfold finsuppLEquivDirectSum
+--         -- simp only [ne_eq]
+--         -- haveI (i : ι) : DecidableEq (N i) := Classical.decEq (N i)
 
-        sorry
-       sorry
-     sorry
-   · sorry
-
-
+--         sorry
+--        sorry
+--      sorry
+--    · sorry
 
 
 
-noncomputable def tensorProdEquiv_apply [Module.Free R M] [Module.Finite R M]
-  (m : M) (n: ∀i, N i) : (tensorProdbilinear R M N) (m ⊗ₜ[R] n) = ( fun i ↦ m ⊗ₜ[R] n i ):= by
-    exact rfl
+
+
+-- noncomputable def tensorProdEquiv_apply [Module.Free R M] [Module.Finite R M]
+--   (m : M) (n: ∀i, N i) : (tensorProdbilinear R M N) (m ⊗ₜ[R] n) = ( fun i ↦ m ⊗ₜ[R] n i ):= by
+--     exact rfl
+
+
+-- -- have (l : L) (a : ProdAdicCompletions A K) :
+-- --         SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B) (l ⊗ₜ a) = 0
+-- --         → (l ⊗ₜ a = (0:L ⊗[K] ProdAdicCompletions A K) ) := by
+-- --           intro h
+-- --           simp [SemialgHom.baseChange_of_algebraMap, SemialgHom.toLinearMap_eq_coe] at h
+-- --           rw [Algebra.ofId_apply] at h
+-- --           rw [← Algebra.smul_def] at h
+-- --           have h₁: l = 0 ∨ (ProdAdicCompletions.baseChange A K L B a = (0 : ProdAdicCompletions B L)) := by
+-- --             exact eq_zero_or_eq_zero_of_smul_eq_zero h
+-- --           have : Function.Injective (ProdAdicCompletions.baseChange A K L B) := by
+-- --             unfold baseChange
+-- --             have inj': ∀(w: HeightOneSpectrum B),
+-- --               Function.Injective (adicCompletionComapSemialgHom A K L B _ w rfl) := by
+-- --               intro w
+-- --               have h_inj : Function.Injective (algebraMap K L) :=
+-- --                 RingHom.injective (algebraMap K L)
+-- --               let inst_alg : Algebra (HeightOneSpectrum.adicCompletion K (comap A w))
+-- --                 (HeightOneSpectrum.adicCompletion L w) := RingHom.toAlgebra <|
+-- --                   adicCompletionComapSemialgHom A K L B (comap A w) w rfl
+-- --               have inj: Function.Injective (algebraMap (HeightOneSpectrum.adicCompletion K (comap A w))
+-- --                 (HeightOneSpectrum.adicCompletion L w)) :=
+-- --                 RingHom.injective (algebraMap (HeightOneSpectrum.adicCompletion K (comap A w))
+-- --                 (HeightOneSpectrum.adicCompletion L w))
+-- --               intro x y hxy
+-- --               have (z : HeightOneSpectrum.adicCompletion K (comap A w)):
+-- --               (algebraMap (HeightOneSpectrum.adicCompletion K (comap A w))
+-- --                 (HeightOneSpectrum.adicCompletion L w)) z =
+-- --                 (adicCompletionComapSemialgHom A K L B (comap A w) w rfl) z :=
+-- --                 rfl
+-- --               rw [← this, ← this] at hxy
+-- --               exact inj hxy
+-- --             intro x y hxy
+-- --             have (w: HeightOneSpectrum B) (x : ProdAdicCompletions A K): (adicCompletionComapSemialgHom A K L B _ w rfl)
+-- --               (x (comap A w)) =
+-- --               (Pi.semialgHomPi _ _ fun w ↦ adicCompletionComapSemialgHom A K L B (comap A w) w rfl)
+-- --                x w := by
+-- --               exact rfl
+-- --             have (w: HeightOneSpectrum B) : (adicCompletionComapSemialgHom A K L B _ w rfl)
+-- --               (x (comap A w)) = (adicCompletionComapSemialgHom A K L B _ w rfl)
+-- --               (y (comap A w)) := by
+-- --               rw [this, this]
+-- --               exact congrFun hxy w
+-- --             have this' (w: HeightOneSpectrum B) : (x (comap A w)) = (y (comap A w)) := inj' w (this w)
+-- --             funext v
+-- --             have : ∀(v: HeightOneSpectrum A), ∃(w: HeightOneSpectrum B), v = comap A w := by
+-- --               intro v
+-- --               sorry
+-- --             obtain ⟨w, hw⟩ := this v
+-- --             rw [hw]
+-- --             exact this' w
+-- --           rcases h₁ with (rfl | hba)
+-- --           · rw [TensorProduct.zero_tmul]
+-- --           · apply (map_eq_zero_iff _ this).mp at hba
+-- --             rw [hba, TensorProduct.tmul_zero]
+-- --         apply?

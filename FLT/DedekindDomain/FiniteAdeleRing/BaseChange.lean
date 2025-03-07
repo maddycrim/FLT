@@ -4,7 +4,7 @@ import FLT.Mathlib.Algebra.Algebra.Hom
 import FLT.Mathlib.Algebra.Algebra.Pi
 import FLT.Mathlib.Algebra.Algebra.Bilinear
 import FLT.Mathlib.Topology.Algebra.UniformRing
-
+import FLT.DedekindDomain.FiniteAdeleRing.directsumprod
 
 /-!
 
@@ -378,13 +378,63 @@ noncomputable def ProdAdicCompletions.baseChange :
   Pi.semialgHomPi _ _ fun w => adicCompletionComapSemialgHom A K L B _ w rfl
 
 open scoped TensorProduct -- ⊗ notation for tensor product
-
+#check AdicCompletion.map_injective
+#check LinearEquiv.toLinearMap
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
     L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L :=
   AlgEquiv.ofBijective
     (SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B))
-    sorry -- #239
+    (by
+      let map := AlgEquiv.piCongrRight (fun (v: HeightOneSpectrum A) ↦ adicCompletionComapAlgEquiv A K L B v)
+      let map' := tensorProdbilinear_map K L (adicCompletion K (R := A))
+      let map'' := (map.restrictScalars K).toLinearEquiv
+      let comp := map' ≪≫ₗ map''
+      let inst_alg : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
+        (algebraMap L (ProdAdicCompletions B L)).comp (algebraMap K L)
+      let inst_scalartower : IsScalarTower K L (ProdAdicCompletions B L) :=
+        IsScalarTower.of_algebraMap_eq (congrFun rfl)
+      let comp' : (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w}, HeightOneSpectrum.adicCompletion L w.1))
+        ≃ₐ[L] ProdAdicCompletions B L :=
+        {
+        toFun := fun f w ↦ f (comap A w) ⟨w, rfl⟩
+        invFun := fun g v w ↦ g w
+        -- better way to prove left_inv?
+        left_inv := fun f ↦ by
+          ext v w₁
+          simp
+          congr
+          exact w₁.2.symm
+          ext w₂
+          refine Eq.congr ?_ rfl
+          exact w₁.2.symm
+          exact proof_irrel_heq rfl w₁.property
+        right_inv := fun g ↦ rfl
+        map_mul' := fun x y ↦ rfl
+        map_add' := fun x y ↦ rfl
+        commutes' := fun r ↦ rfl
+      }
+      let comp'' := (comp'.restrictScalars K).toLinearEquiv
+      let comp_final := comp ≪≫ₗ comp''
+      have : ((SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap =
+        (comp_final).toLinearMap := by
+        apply TensorProduct.ext'
+        intro x y
+        simp only [AlgHom.toLinearMap_apply, AlgHom.coe_restrictScalars', LinearEquiv.coe_coe]
+        dsimp [SemialgHom.baseChange_of_algebraMap, comp_final, comp'', comp', comp, map, map'', map']
+        refine funext ?_
+        intro w
+        erw [tensorProdbilinear_map_apply']
+        dsimp [adicCompletionComapAlgEquiv]
+        rw [tensorAdicCompletionComapAlgHom_tmul_apply]
+        rw [Algebra.ofId_apply, Algebra.smul_def x]
+        erw [ProdAdicCompletions.baseChange]
+        rfl
+      suffices Function.Bijective ((SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap by
+        convert this
+      rw [this]
+      exact comp_final.bijective) -- #239
 
+#exit
 -- I am unclear about whether these next two sorries are in the right order.
 -- One direction of `baseChange_isFiniteAdele_iff` below (->) is easy, but perhaps the other way
 -- should be deduced from the result after this one. See #240.
