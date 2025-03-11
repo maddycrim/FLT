@@ -4,10 +4,9 @@ import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 
 
 section
-variable {ι' : Type*}
-variable {R ι: Type*} {M N : ι → ι' → Type*} [CommRing R] [∀i i', AddCommGroup (M i i')]
-[∀i i', AddCommGroup (N i i')]
-variable [∀i i', Module R (M i i')][∀i i', Module R (N i i')] [Fintype ι'][DecidableEq ι']
+variable {ι' : Type*} [Fintype ι'] [DecidableEq ι'] {R ι : Type*} [CommRing R]
+  {M N : ι → ι' → Type*} [∀ i i', AddCommGroup (M i i')] [∀ i i', AddCommGroup (N i i')]
+  [∀i i', Module R (M i i')] [∀i i', Module R (N i i')]
 open DirectSum
 
 -- NEEDED
