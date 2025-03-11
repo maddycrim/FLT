@@ -10,6 +10,8 @@ variable {R ι: Type*} {M N : ι → ι' → Type*} [CommRing R] [∀i i', AddCo
 variable [∀i i', Module R (M i i')][∀i i', Module R (N i i')] [Fintype ι'][DecidableEq ι']
 open DirectSum
 
+-- NEEDED
+-- name suggestion: `directSumProd_equiv_prodSum`
 def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
   toFun nm i := ∑i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
   map_add' x y := by
@@ -150,7 +152,7 @@ noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
 
 
 
-
+-- NEEDED
 open TensorProduct
 variable (R M N)
 noncomputable def moduleTensorProdEquiv [Module.Free R M] [Module.Finite R M] :
@@ -228,6 +230,8 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
       simp only [Eq.recOn.eq_def, eq_rec_constant, dif_eq_if]
       rw [ite_apply, Pi.zero_apply, Pi.smul_apply, apply_ite (DFunLike.coe _), AddMonoidHom.map_zero]
     apply Fintype.sum_dite_eq
+
+#exit
 
 #check LinearMap.single
 #check LinearMap.proj
