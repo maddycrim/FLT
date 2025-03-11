@@ -175,14 +175,14 @@ noncomputable def tensorProdbilinear_map :
 lemma tensorProdbilinear_map_apply (m : M) (n : ∀ i, N i) :
     tensorProdbilinear_map R M N (m ⊗ₜ n) = fun i ↦ (m ⊗ₜ n i) := by
   unfold tensorProdbilinear_map
-  simp [moduleTensorProdEquiv]
+  simp only [moduleTensorProdEquiv, LinearEquiv.trans_apply, congr_tmul, LinearEquiv.refl_apply]
   -- the goal now mentions `(Module.Free.repr R M) m` which has type `(some set) →₀ R`
   -- i.e. `Finsupp`, so we can (rather inelegantly) change the goal so that it
   -- doesn't mention m at all and only mentions `m'`, this finitely-supported function.
   let m' := (Module.Free.repr R M) m
   have hm' : (Module.Free.repr R M).symm m' = m := by simp [m']
   rw [← hm']
-  simp
+  simp only [LinearEquiv.apply_symm_apply]
   -- Now the goal only has m' not m so we can apply an induction principle
   induction m' using Finsupp.induction_linear
   · -- goal true for zero function
@@ -197,7 +197,7 @@ lemma tensorProdbilinear_map_apply (m : M) (n : ∀ i, N i) :
     -- randomly move an equiv to the other side out of hope more
     -- than anything else
     rw [← LinearEquiv.eq_symm_apply]
-    simp [prodTensorEquiv]
+    simp only [prodTensorEquiv, LinearEquiv.piCongrRight_symm]
     ext i
     simp only [LinearEquiv.piCongrRight_apply, LinearEquiv.rTensor_symm_tmul, LinearEquiv.symm_symm,
       LinearEquiv.apply_symm_apply, m']
