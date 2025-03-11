@@ -396,28 +396,27 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
       let equiv_prod := commute ≪≫ₗ restrict
       let inst_alg : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
         (algebraMap L (ProdAdicCompletions B L)).comp (algebraMap K L)
-      let inst_scalartower : IsScalarTower K L (ProdAdicCompletions B L) :=
+      haveI : IsScalarTower K L (ProdAdicCompletions B L) :=
         IsScalarTower.of_algebraMap_eq (congrFun rfl)
       -- prod_equiv' gives a map from ∏v∣w ∏w L w ≃ ∏ L w
-      let prod_equiv' : (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w},
+      let prod_equiv' : (∀ (v : HeightOneSpectrum A),
+          (∀ w : {w : HeightOneSpectrum B // v = comap A w},
         HeightOneSpectrum.adicCompletion L w.1)) ≃ₐ[L] ProdAdicCompletions B L :=
         {
-        toFun := fun f w ↦ f (comap A w) ⟨w, rfl⟩
-        invFun := fun g v w ↦ g w
+        toFun f w := f (comap A w) ⟨w, rfl⟩
+        invFun g _ w := g w
         -- better way to prove left_inv?
-        left_inv := fun f ↦ by
+        left_inv f := by
           ext v w₁
-          simp
+          simp only
           congr
-          exact w₁.2.symm
-          ext w₂
-          refine Eq.congr ?_ rfl
-          exact w₁.2.symm
-          exact proof_irrel_heq rfl w₁.property
-        right_inv := fun g ↦ rfl
-        map_mul' := fun x y ↦ rfl
-        map_add' := fun x y ↦ rfl
-        commutes' := fun r ↦ rfl
+          · exact w₁.2.symm
+          · rw [← w₁.2]
+          · exact proof_irrel_heq rfl w₁.2
+        right_inv _ := rfl
+        map_mul' _ _ := rfl
+        map_add' _ _ := rfl
+        commutes' _ := rfl
       }
       -- restrict' map restricts prod_equiv' to K-linear iso
       let restrict' := (prod_equiv'.restrictScalars K).toLinearEquiv
