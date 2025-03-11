@@ -389,7 +389,7 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
       let prod_equiv := AlgEquiv.piCongrRight (fun (v: HeightOneSpectrum A)
         ↦ adicCompletionComapAlgEquiv A K L B v)
       -- `commute` says `L ⊗ ∏ K v ≃ ∏ L ⊗ K v`
-      let commute := tensorProdbilinear_map K L (adicCompletion K (R := A))
+      let commute := tensorProdbilinear_map (R := K) L (adicCompletion K (R := A))
       -- `restrict` map restricts `prod_equiv` to `K`-linear iso
       let restrict := (prod_equiv.restrictScalars K).toLinearEquiv
       -- `equiv_prod` gives a map from `L ⊗ ∏ K v ≃ ∏v∣w ∏w L w`
@@ -434,7 +434,7 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
         equiv_prod, prod_equiv, restrict, commute]
         refine funext ?_
         intro w
-        erw [tensorProdbilinear_map_apply']
+        erw [tensorProdbilinear_map_apply]
         dsimp [adicCompletionComapAlgEquiv]
         rw [tensorAdicCompletionComapAlgHom_tmul_apply, Algebra.ofId_apply, Algebra.smul_def x]
         erw [ProdAdicCompletions.baseChange]

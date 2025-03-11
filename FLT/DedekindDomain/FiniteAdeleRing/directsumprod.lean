@@ -143,13 +143,12 @@ end
 section
 
 open DirectSum
-variable {R : Type*} (M : Type*) [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
+variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
   (N : ι → Type*) [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
 
 
 -- NEEDED
 open TensorProduct
---variable (R M N)
 noncomputable def moduleTensorProdEquiv [Module.Free R M] [Module.Finite R M] :
     M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
   TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
@@ -166,16 +165,16 @@ noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M
      (finsuppScalarLeft R (N i) (Module.Free.ChooseBasisIndex R M)).symm)
 
 noncomputable def prodTensorEquiv [Module.Free R M] [Module.Finite R M] :
-  (∀i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i):=
+    (∀i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i):=
   LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm))
 
 noncomputable def tensorProdbilinear_map [Module.Free R M] [Module.Finite R M] :
     M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
-  (moduleTensorProdEquiv M N) ≪≫ₗ (TensorProdEquivProdTensor M N) ≪≫ₗ (prodTensorEquiv M N)
+  (moduleTensorProdEquiv R M N) ≪≫ₗ (TensorProdEquivProdTensor R M N) ≪≫ₗ (prodTensorEquiv R M N)
 
 noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M]
     (m : M) (n : ∀ i, N i) :
-    tensorProdbilinear_map M N (m ⊗ₜ n) (R := R) = fun i ↦ (m ⊗ₜ n i) := by
+    tensorProdbilinear_map R M N (m ⊗ₜ n) = fun i ↦ (m ⊗ₜ n i) := by
   unfold tensorProdbilinear_map
   simp [moduleTensorProdEquiv]
   -- the goal now mentions `(Module.Free.repr R M) m` which has type `(some set) →₀ R`
@@ -201,7 +200,8 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
     rw [← LinearEquiv.eq_symm_apply]
     simp [prodTensorEquiv]
     ext i
-    simp
+    simp only [LinearEquiv.piCongrRight_apply, LinearEquiv.rTensor_symm_tmul, LinearEquiv.symm_symm,
+      LinearEquiv.apply_symm_apply, m']
     -- we are surely close!
     -- ⊢ (TensorProdEquivProdTensor R M N) (Finsupp.single j r ⊗ₜ[R] n) i = Finsupp.single j r ⊗ₜ[R] n i
     -- Kevin got here
@@ -225,13 +225,15 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
       rw [ite_apply, Pi.zero_apply, Pi.smul_apply, apply_ite (DFunLike.coe _), AddMonoidHom.map_zero]
     apply Fintype.sum_dite_eq
 
+
 #exit
 
 #check LinearMap.single
 #check LinearMap.proj
+
 noncomputable def tensorProdbilinear_map_apply' [Module.Free R M] [Module.Finite R M]
-  (m : M) (n : ∀ i, N i) (i : ι):
-  tensorProdbilinear_map R M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
+    (m : M) (n : ∀ i, N i) (i : ι) :
+    tensorProdbilinear_map (R := R) M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
   rw [tensorProdbilinear_map_apply]
 
 
