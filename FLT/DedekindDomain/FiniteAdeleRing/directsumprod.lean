@@ -9,10 +9,8 @@ variable {ι' : Type*} [Fintype ι'] [DecidableEq ι'] {R ι : Type*} [CommRing 
   [∀i i', Module R (M i i')] [∀i i', Module R (N i i')]
 open DirectSum
 
--- NEEDED
--- name suggestion: `directSumProd_equiv_prodSum`
-def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
-  toFun nm i := ∑i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
+def directSumProd_equiv_prodSum : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
+  toFun nm i := ∑ i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
   map_add' x y := by
     simp only [add_apply, Pi.add_apply, map_add]
     ext i
@@ -25,7 +23,7 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     intro i' _
     rw [← DirectSum.of_smul]
     rfl
-  invFun nm :=  ∑i', DirectSum.of (fun j ↦ ∀ i, N i j) i' (fun i ↦ nm i i')
+  invFun nm :=  ∑ i', DirectSum.of (fun j ↦ ∀ i, N i j) i' (fun i ↦ nm i i')
   left_inv nm := by
     simp only
     convert sum_univ_of (x := nm) with j _ i
@@ -37,8 +35,7 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     · simp [of_eq_of_ne _ _ _ h]
   right_inv nm := by
     simp only
-    refine funext ?_
-    intro i
+    refine funext (fun i ↦ ?_)
     convert sum_univ_of (x := nm i) with j _ i
     conv_rhs => rw [← DirectSum.sum_univ_of (nm i)]
     rw [DFinsupp.finset_sum_apply, DFinsupp.finset_sum_apply, Finset.sum_apply]
@@ -46,7 +43,6 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     by_cases h : k = j
     · subst h; simp
     · simp [of_eq_of_ne _ _ _ h]
-
 
 end
 
@@ -163,7 +159,7 @@ noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M
       ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
   finsuppScalarLeft R (∀i, N i) (Module.Free.ChooseBasisIndex R M) ≪≫ₗ
     (finsuppLEquivDirectSum R (∀i, N i) (Module.Free.ChooseBasisIndex R M)) ≪≫ₗ
-    proddirectsum'  ≪≫ₗ
+    directSumProd_equiv_prodSum  ≪≫ₗ
     LinearEquiv.piCongrRight (fun i ↦(finsuppLEquivDirectSum R (N i)
     (Module.Free.ChooseBasisIndex R M)).symm)
     ≪≫ₗ  LinearEquiv.piCongrRight (fun i ↦
@@ -221,7 +217,7 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
     clear k hm' m' m
     rw [LinearEquiv.symm_apply_eq,finsuppLEquivDirectSum_single,
       finsuppScalarLeft_apply_tmul, Finsupp.sum_single_index (by simp),
-      finsuppLEquivDirectSum_single, DirectSum.lof_eq_of, DirectSum.lof_eq_of, proddirectsum']
+      finsuppLEquivDirectSum_single, DirectSum.lof_eq_of, DirectSum.lof_eq_of, directSumProd_equiv_prodSum]
     simp_rw [← LinearEquiv.toFun_eq_coe]
     conv_lhs =>
       enter [2, x]
