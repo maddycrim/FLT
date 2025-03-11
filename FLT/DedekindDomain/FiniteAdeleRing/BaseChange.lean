@@ -378,29 +378,28 @@ noncomputable def ProdAdicCompletions.baseChange :
   Pi.semialgHomPi _ _ fun w => adicCompletionComapSemialgHom A K L B _ w rfl
 
 open scoped TensorProduct -- ⊗ notation for tensor product
-#check AdicCompletion.map_injective
-#check LinearEquiv.toLinearMap
+
 noncomputable def ProdAdicCompletions.baseChangeEquiv :
     L ⊗[K] ProdAdicCompletions A K ≃ₐ[L] ProdAdicCompletions B L :=
   AlgEquiv.ofBijective
     (SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B))
     (by
       --strategy, compose a K-linear iso from L ⊗ ∏ K v to ∏ L w
-      -- map says ∏ L ⊗ K v ≃ ∏v∣w ∏w L w
-      let map := AlgEquiv.piCongrRight (fun (v: HeightOneSpectrum A)
+      -- prod_equiv says ∏ L ⊗ K v ≃ ∏v∣w ∏w L w
+      let prod_equiv := AlgEquiv.piCongrRight (fun (v: HeightOneSpectrum A)
         ↦ adicCompletionComapAlgEquiv A K L B v)
-      -- map' commutes the direct product and tensor product
-      let map' := tensorProdbilinear_map K L (adicCompletion K (R := A))
-      -- map'' restricts to K-linear iso
-      let map'' := (map.restrictScalars K).toLinearEquiv
+      -- commute says L ⊗ ∏ K v ≃ ∏ L ⊗ K v
+      let commute := tensorProdbilinear_map K L (adicCompletion K (R := A))
+      -- restrict map restricts prod_equiv to K-linear iso
+      let restrict := (prod_equiv.restrictScalars K).toLinearEquiv
       -- comp gives a map from L ⊗ ∏ K v ≃ ∏v∣w ∏w L w
-      let comp := map' ≪≫ₗ map''
+      let equiv_prod := commute ≪≫ₗ restrict
       let inst_alg : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
         (algebraMap L (ProdAdicCompletions B L)).comp (algebraMap K L)
       let inst_scalartower : IsScalarTower K L (ProdAdicCompletions B L) :=
         IsScalarTower.of_algebraMap_eq (congrFun rfl)
-      -- comp' gives a map from ∏v∣w ∏w L w ≃ ∏ L w
-      let comp' : (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w},
+      -- prod_equiv' gives a map from ∏v∣w ∏w L w ≃ ∏ L w
+      let prod_equiv' : (∀(v: HeightOneSpectrum A), (∀ w : {w : HeightOneSpectrum B // v = comap A w},
         HeightOneSpectrum.adicCompletion L w.1)) ≃ₐ[L] ProdAdicCompletions B L :=
         {
         toFun := fun f w ↦ f (comap A w) ⟨w, rfl⟩
@@ -420,17 +419,19 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
         map_add' := fun x y ↦ rfl
         commutes' := fun r ↦ rfl
       }
-      -- restricts comp' to K-linear iso
-      let comp'' := (comp'.restrictScalars K).toLinearEquiv
-      -- comp_final gives us the map L ⊗ ∏ K v to ∏ L w
-      let comp_final := comp ≪≫ₗ comp''
+      -- restrict' map restricts prod_equiv' to K-linear iso
+      let restrict' := (prod_equiv'.restrictScalars K).toLinearEquiv
+      -- baseChangeEquiv' gives us the K-linear iso L ⊗ ∏ K v to ∏ L w
+      let baseChangeEquiv' := equiv_prod ≪≫ₗ restrict'
       --show the maps are the same
-      have : ((SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap =
-        (comp_final).toLinearMap := by
+      have : ((SemialgHom.baseChange_of_algebraMap
+        (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap =
+        (baseChangeEquiv').toLinearMap := by
         apply TensorProduct.ext'
         intro x y
         simp only [AlgHom.toLinearMap_apply, AlgHom.coe_restrictScalars', LinearEquiv.coe_coe]
-        dsimp [SemialgHom.baseChange_of_algebraMap, comp_final, comp'', comp', comp, map, map'', map']
+        dsimp [SemialgHom.baseChange_of_algebraMap, baseChangeEquiv', restrict', prod_equiv',
+        equiv_prod, prod_equiv, restrict, commute]
         refine funext ?_
         intro w
         erw [tensorProdbilinear_map_apply']
@@ -438,10 +439,11 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
         rw [tensorAdicCompletionComapAlgHom_tmul_apply, Algebra.ofId_apply, Algebra.smul_def x]
         erw [ProdAdicCompletions.baseChange]
         rfl
-      suffices Function.Bijective ((SemialgHom.baseChange_of_algebraMap (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap by
+      suffices Function.Bijective ((SemialgHom.baseChange_of_algebraMap
+        (ProdAdicCompletions.baseChange A K L B)).restrictScalars K).toLinearMap by
         convert this
       rw [this]
-      exact comp_final.bijective) -- #239
+      exact baseChangeEquiv'.bijective) -- #239
 
 #exit
 -- I am unclear about whether these next two sorries are in the right order.

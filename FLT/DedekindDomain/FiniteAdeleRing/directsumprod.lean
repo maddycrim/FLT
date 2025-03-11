@@ -213,17 +213,14 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
     simp only [LinearEquiv.trans_apply, LinearEquiv.piCongrRight_apply]
     rw [LinearEquiv.symm_apply_eq]
     ext k
-    rw [finsuppScalarLeft_apply, LinearMap.rTensor_tmul, Finsupp.lapply_apply, TensorProduct.lid_tmul]
-    rw [Finsupp.single_apply, ite_smul, zero_smul, ← Finsupp.single_apply]
+    rw [finsuppScalarLeft_apply, LinearMap.rTensor_tmul, Finsupp.lapply_apply,
+      TensorProduct.lid_tmul, Finsupp.single_apply, ite_smul, zero_smul, ← Finsupp.single_apply]
     apply congrFun
     apply congrArg
     clear k hm' m' m
-    rw [LinearEquiv.symm_apply_eq]
-    rw [finsuppLEquivDirectSum_single]
-    rw [finsuppScalarLeft_apply_tmul, Finsupp.sum_single_index (by simp)]
-    rw [finsuppLEquivDirectSum_single]
-    rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of]
-    rw [proddirectsum']
+    rw [LinearEquiv.symm_apply_eq,finsuppLEquivDirectSum_single,
+      finsuppScalarLeft_apply_tmul, Finsupp.sum_single_index (by simp),
+      finsuppLEquivDirectSum_single, DirectSum.lof_eq_of, DirectSum.lof_eq_of, proddirectsum']
     simp_rw [← LinearEquiv.toFun_eq_coe]
     conv_lhs =>
       enter [2, x]
@@ -239,40 +236,7 @@ noncomputable def tensorProdbilinear_map_apply' [Module.Free R M] [Module.Finite
   tensorProdbilinear_map R M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
   rw [tensorProdbilinear_map_apply]
 
-variable [DecidableEq ι]
-noncomputable def tensorProdbilinear_map' [Module.Free R M] [Module.Finite R M] :
-  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
-  {TensorProduct.lift <| {
-      toFun := fun m ↦ {
-        toFun := fun n i ↦ m ⊗ₜ[R] n i
-        map_add' := by
-          intro x y
-          ext i
-          simp only [add_apply, Pi.add_apply, map_add]
-          exact TensorProduct.tmul_add m (x i) (y i)
-        map_smul' := by
-          intro m n
-          ext i
-          simp only [Pi.smul_apply, TensorProduct.tmul_smul, TensorProduct.zero_tmul, smul_zero,
-          RingHom.id_apply]
-      }
-      map_add' := by
-        intro m₁ m₂
-        ext n i
-        simp only [add_apply, Pi.add_apply, map_add]
-        exact TensorProduct.add_tmul m₁ m₂ (n i)
-      map_smul' := by
-        intro r m
-        ext n i
-        simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
-          Pi.smul_apply]
-        rfl
-        } with
-   invFun  :=  fun x ↦ (fun i ↦ x i) ↦ ((map LinearMap.id (LinearMap.single R N i)).comp
-      (LinearMap.proj i (φ := fun i ↦ (M ⊗[R] N i)) (R:=R)) x)
-   left_inv := sorry
-   right_inv := sorry
-  }
+
 variable {M' : Type*}[AddCommGroup M'] [Module R M'] [DecidableEq ι]
 noncomputable def comm' : M ⊗[R] M' ≃ₗ[R] M' ⊗[R] M :=
   LinearEquiv.ofLinear (lift (mk R M' M).flip) (lift (mk R M M').flip) (ext' fun _ _ => rfl)
