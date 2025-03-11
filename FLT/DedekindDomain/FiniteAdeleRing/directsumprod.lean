@@ -143,19 +143,19 @@ end
 section
 
 open DirectSum
-variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
-  (N : ι → Type*) [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
+variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] [Module.Free R M]
+  [Module.Finite R M] {ι : Type*} (N : ι → Type*) [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
 
 
 -- NEEDED
 open TensorProduct
-noncomputable def moduleTensorProdEquiv [Module.Free R M] [Module.Finite R M] :
-    M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
+noncomputable def moduleTensorProdEquiv :
+    M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀ i, N i) :=
   TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
 
-noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M] :
-    (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) ≃ₗ[R]
-      ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
+noncomputable def TensorProdEquivProdTensor :
+    (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀ i, N i) ≃ₗ[R]
+      ∀ i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
   finsuppScalarLeft R (∀i, N i) (Module.Free.ChooseBasisIndex R M) ≪≫ₗ
     (finsuppLEquivDirectSum R (∀i, N i) (Module.Free.ChooseBasisIndex R M)) ≪≫ₗ
     directSumProd_equiv_prodSum  ≪≫ₗ
@@ -164,16 +164,15 @@ noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M
     ≪≫ₗ  LinearEquiv.piCongrRight (fun i ↦
      (finsuppScalarLeft R (N i) (Module.Free.ChooseBasisIndex R M)).symm)
 
-noncomputable def prodTensorEquiv [Module.Free R M] [Module.Finite R M] :
-    (∀i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i):=
+noncomputable def prodTensorEquiv :
+    (∀ i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i):=
   LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm))
 
-noncomputable def tensorProdbilinear_map [Module.Free R M] [Module.Finite R M] :
+noncomputable def tensorProdbilinear_map :
     M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
   (moduleTensorProdEquiv R M N) ≪≫ₗ (TensorProdEquivProdTensor R M N) ≪≫ₗ (prodTensorEquiv R M N)
 
-noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M]
-    (m : M) (n : ∀ i, N i) :
+lemma tensorProdbilinear_map_apply (m : M) (n : ∀ i, N i) :
     tensorProdbilinear_map R M N (m ⊗ₜ n) = fun i ↦ (m ⊗ₜ n i) := by
   unfold tensorProdbilinear_map
   simp [moduleTensorProdEquiv]
