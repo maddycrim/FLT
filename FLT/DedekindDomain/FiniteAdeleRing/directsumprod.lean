@@ -4,14 +4,13 @@ import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 
 
 section
-variable {ι' : Type*}
-variable {R ι: Type*} {M N : ι → ι' → Type*} [CommRing R] [∀i i', AddCommGroup (M i i')]
-[∀i i', AddCommGroup (N i i')]
-variable [∀i i', Module R (M i i')][∀i i', Module R (N i i')] [Fintype ι'][DecidableEq ι']
+variable {ι' : Type*} [Fintype ι'] [DecidableEq ι'] {R ι : Type*} [CommRing R]
+  {M N : ι → ι' → Type*} [∀ i i', AddCommGroup (M i i')] [∀ i i', AddCommGroup (N i i')]
+  [∀i i', Module R (M i i')] [∀i i', Module R (N i i')]
 open DirectSum
 
-def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
-  toFun nm i := ∑i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
+def directSumProd_equiv_prodSum : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i', N i i')) where
+  toFun nm i := ∑ i', DirectSum.of (fun i' ↦ N i i') i' (nm i' i)
   map_add' x y := by
     simp only [add_apply, Pi.add_apply, map_add]
     ext i
@@ -24,7 +23,7 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     intro i' _
     rw [← DirectSum.of_smul]
     rfl
-  invFun nm :=  ∑i', DirectSum.of (fun j ↦ ∀ i, N i j) i' (fun i ↦ nm i i')
+  invFun nm :=  ∑ i', DirectSum.of (fun j ↦ ∀ i, N i j) i' (fun i ↦ nm i i')
   left_inv nm := by
     simp only
     convert sum_univ_of (x := nm) with j _ i
@@ -36,8 +35,7 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     · simp [of_eq_of_ne _ _ _ h]
   right_inv nm := by
     simp only
-    refine funext ?_
-    intro i
+    refine funext (fun i ↦ ?_)
     convert sum_univ_of (x := nm i) with j _ i
     conv_rhs => rw [← DirectSum.sum_univ_of (nm i)]
     rw [DFinsupp.finset_sum_apply, DFinsupp.finset_sum_apply, Finset.sum_apply]
@@ -46,64 +44,57 @@ def proddirectsum' : (⨁ (i' : ι'), (∀ i, N i i')) ≃ₗ[R] (∀ i, (⨁ i'
     · subst h; simp
     · simp [of_eq_of_ne _ _ _ h]
 
-
 end
 
-open DirectSum
-variable {R ι : Type*}
-variable [Semiring R] {φ ψ χ : ι → Type*}
-variable [(i : ι) → AddCommMonoid (φ i)] [(i : ι) → Module R (φ i)]
-variable [(i : ι) → AddCommMonoid (ψ i)] [(i : ι) → Module R (ψ i)]
-/-- Proof that if we have a family of isomorphisms then the direct sums are isomorphic
-given a fintype ι. Can be proved for infinite type?
--/
-noncomputable def sumCongrRight [Fintype ι] [DecidableEq ι] (e : (i : ι) → φ i ≃ₗ[R] ψ i) : (⨁i, φ i) ≃ₗ[R] ⨁i,ψ i where
-  toFun f :=  ∑i, DirectSum.of ψ i ((e i) (f i))
-  invFun f := ∑i, DirectSum.of φ i ((e i).symm (f i))
-  map_add' f g := by
-    simp only [add_apply, map_add]
-    rw [← Finset.sum_add_distrib]
-  map_smul' r f := by
-    simp only [RingHom.id_apply]
-    rw [Finset.smul_sum, Finset.sum_congr rfl]
-    intro i' _
-    rw [← DirectSum.of_smul, ← map_smul]
-    rfl
-  left_inv f := by
-    simp only
-    convert sum_univ_of (x := f) with j hj i
-    have : (e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j) = f j ↔ (e j ) ((e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j)) = (e j) (f j) := by
-      exact Iff.symm (EmbeddingLike.apply_eq_iff_eq (e j))
-    apply this.mpr
-    have : (e j) ((e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j)) =  (((∑ x : ι, (of ψ x) ((e x) (f x))) j)) := by
-      exact LinearEquiv.apply_symm_apply (e j) ((∑ x : ι, (of ψ x) ((e x) (f x))) j)
-    rw [this]
-    rw [DFinsupp.finset_sum_apply]
-    rw [Finset.sum_eq_single j]
-    exact of_eq_same j ((e j) (f j))
-    exact fun b a a ↦ of_eq_of_ne b j ((e b) (f b)) a
-    exact fun a ↦ False.elim (a hj)
-  right_inv f := by
-    simp only
-    convert sum_univ_of (x := f) with j hj i
-    have : (e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j) = f j ↔ (e j ).symm ((e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) = (e j).symm (f j) := by
-      exact Iff.symm (EmbeddingLike.apply_eq_iff_eq (e j).symm)
-    apply this.mpr
-    have : (e j).symm ((e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) =  (((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) := by
-      exact LinearEquiv.apply_symm_apply (e j).symm ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)
-    rw [this]
-    rw [DFinsupp.finset_sum_apply]
-    rw [Finset.sum_eq_single j]
-    exact of_eq_same j ((e j).symm (f j))
-    exact fun b a a ↦ of_eq_of_ne b j ((e b).symm (f b)) a
-    exact fun a ↦ False.elim (a hj)
+-- open DirectSum
+-- variable {R ι : Type*}
+-- variable [Semiring R] {φ ψ χ : ι → Type*}
+-- variable [(i : ι) → AddCommMonoid (φ i)] [(i : ι) → Module R (φ i)]
+-- variable [(i : ι) → AddCommMonoid (ψ i)] [(i : ι) → Module R (ψ i)]
+-- /-- Proof that if we have a family of isomorphisms then the direct sums are isomorphic
+-- given a fintype ι. Can be proved for infinite type?
+-- -/
+-- noncomputable def sumCongrRight [Fintype ι] [DecidableEq ι] (e : (i : ι) → φ i ≃ₗ[R] ψ i) : (⨁i, φ i) ≃ₗ[R] ⨁i,ψ i where
+--   toFun f :=  ∑i, DirectSum.of ψ i ((e i) (f i))
+--   invFun f := ∑i, DirectSum.of φ i ((e i).symm (f i))
+--   map_add' f g := by
+--     simp only [add_apply, map_add]
+--     rw [← Finset.sum_add_distrib]
+--   map_smul' r f := by
+--     simp only [RingHom.id_apply]
+--     rw [Finset.smul_sum, Finset.sum_congr rfl]
+--     intro i' _
+--     rw [← DirectSum.of_smul, ← map_smul]
+--     rfl
+--   left_inv f := by
+--     simp only
+--     convert sum_univ_of (x := f) with j hj i
+--     have : (e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j) = f j ↔ (e j ) ((e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j)) = (e j) (f j) := by
+--       exact Iff.symm (EmbeddingLike.apply_eq_iff_eq (e j))
+--     apply this.mpr
+--     have : (e j) ((e j).symm ((∑ x : ι, (of ψ x) ((e x) (f x))) j)) =  (((∑ x : ι, (of ψ x) ((e x) (f x))) j)) := by
+--       exact LinearEquiv.apply_symm_apply (e j) ((∑ x : ι, (of ψ x) ((e x) (f x))) j)
+--     rw [this]
+--     rw [DFinsupp.finset_sum_apply]
+--     rw [Finset.sum_eq_single j]
+--     exact of_eq_same j ((e j) (f j))
+--     exact fun b a a ↦ of_eq_of_ne b j ((e b) (f b)) a
+--     exact fun a ↦ False.elim (a hj)
+--   right_inv f := by
+--     simp only
+--     convert sum_univ_of (x := f) with j hj i
+--     have : (e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j) = f j ↔ (e j ).symm ((e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) = (e j).symm (f j) := by
+--       exact Iff.symm (EmbeddingLike.apply_eq_iff_eq (e j).symm)
+--     apply this.mpr
+--     have : (e j).symm ((e j) ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) =  (((∑ x : ι, (of φ x) ((e x).symm (f x))) j)) := by
+--       exact LinearEquiv.apply_symm_apply (e j).symm ((∑ x : ι, (of φ x) ((e x).symm (f x))) j)
+--     rw [this]
+--     rw [DFinsupp.finset_sum_apply]
+--     rw [Finset.sum_eq_single j]
+--     exact of_eq_same j ((e j).symm (f j))
+--     exact fun b a a ↦ of_eq_of_ne b j ((e b).symm (f b)) a
+--     exact fun a ↦ False.elim (a hj)
 
-
-section
-
-open DirectSum
-variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
-{N : ι → Type*} [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
 
 -- #check DirectSum.linearEquivFunOnFintype R
 -- #check Module.Free.ChooseBasisIndex.fintype
@@ -116,79 +107,82 @@ variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
 --     exact linearEquivFunOnFintype R (Module.Free.ChooseBasisIndex R M) fun i ↦ R
 --   exact LinearEquiv.trans h₁ h₂.symm
 
-open scoped TensorProduct
+-- open scoped TensorProduct
 
 
-noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
-   M ⊗[R] (∀ i, N i) →ₗ[R] ∀ i, (M ⊗[R] N i) :=
-  TensorProduct.lift <| {
-      toFun := fun m ↦ {
-        toFun := fun n i ↦ m ⊗ₜ[R] n i
-        map_add' := by
-          intro x y
-          ext i
-          simp only [add_apply, Pi.add_apply, map_add]
-          exact TensorProduct.tmul_add m (x i) (y i)
-        map_smul' := by
-          intro m n
-          ext i
-          simp only [Pi.smul_apply, TensorProduct.tmul_smul, TensorProduct.zero_tmul, smul_zero,
-          RingHom.id_apply]
-      }
-      map_add' := by
-        intro m₁ m₂
-        ext n i
-        simp only [add_apply, Pi.add_apply, map_add]
-        exact TensorProduct.add_tmul m₁ m₂ (n i)
-      map_smul' := by
-        intro r m
-        ext n i
-        simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
-          Pi.smul_apply]
-        rfl
-        }
+-- noncomputable def tensorProdbilinear' [Module.Free R M] [Module.Finite R M]:
+--    M ⊗[R] (∀ i, N i) →ₗ[R] ∀ i, (M ⊗[R] N i) :=
+--   TensorProduct.lift <| {
+--       toFun := fun m ↦ {
+--         toFun := fun n i ↦ m ⊗ₜ[R] n i
+--         map_add' := by
+--           intro x y
+--           ext i
+--           simp only [add_apply, Pi.add_apply, map_add]
+--           exact TensorProduct.tmul_add m (x i) (y i)
+--         map_smul' := by
+--           intro m n
+--           ext i
+--           simp only [Pi.smul_apply, TensorProduct.tmul_smul, TensorProduct.zero_tmul, smul_zero,
+--           RingHom.id_apply]
+--       }
+--       map_add' := by
+--         intro m₁ m₂
+--         ext n i
+--         simp only [add_apply, Pi.add_apply, map_add]
+--         exact TensorProduct.add_tmul m₁ m₂ (n i)
+--       map_smul' := by
+--         intro r m
+--         ext n i
+--         simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply, LinearMap.smul_apply,
+--           Pi.smul_apply]
+--         rfl
+--         }
 
 
+section
+
+open DirectSum
+variable (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] [Module.Free R M]
+  [Module.Finite R M] {ι : Type*} (N : ι → Type*) [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
 
 
+-- NEEDED
 open TensorProduct
-variable (R M N)
-noncomputable def moduleTensorProdEquiv [Module.Free R M] [Module.Finite R M] :
-    M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) :=
+noncomputable def moduleTensorProdEquiv :
+    M ⊗[R] (∀ i, N i) ≃ₗ[R] (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀ i, N i) :=
   TensorProduct.congr (Module.Free.repr R M) (LinearEquiv.refl R ((i : ι) → N i))
 
-noncomputable def TensorProdEquivProdTensor [Module.Free R M] [Module.Finite R M] :
-    (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀i, N i) ≃ₗ[R]
-      ∀i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
+noncomputable def TensorProdEquivProdTensor :
+    (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (∀ i, N i) ≃ₗ[R]
+      ∀ i, ( Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] (N i) :=
   finsuppScalarLeft R (∀i, N i) (Module.Free.ChooseBasisIndex R M) ≪≫ₗ
     (finsuppLEquivDirectSum R (∀i, N i) (Module.Free.ChooseBasisIndex R M)) ≪≫ₗ
-    proddirectsum'  ≪≫ₗ
+    directSumProd_equiv_prodSum  ≪≫ₗ
     LinearEquiv.piCongrRight (fun i ↦(finsuppLEquivDirectSum R (N i)
     (Module.Free.ChooseBasisIndex R M)).symm)
     ≪≫ₗ  LinearEquiv.piCongrRight (fun i ↦
      (finsuppScalarLeft R (N i) (Module.Free.ChooseBasisIndex R M)).symm)
 
-noncomputable def prodTensorEquiv [Module.Free R M] [Module.Finite R M] :
-  (∀i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀i, (M ⊗[R] N i):=
+noncomputable def prodTensorEquiv :
+    (∀ i, (Module.Free.ChooseBasisIndex R M →₀ R) ⊗[R] N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i):=
   LinearEquiv.piCongrRight (fun i ↦ (LinearEquiv.rTensor (N i) (Module.Free.repr R M).symm))
 
-noncomputable def tensorProdbilinear_map [Module.Free R M] [Module.Finite R M] :
-  M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
+noncomputable def tensorProdbilinear_map :
+    M ⊗[R] (∀ i, N i) ≃ₗ[R] ∀ i, (M ⊗[R] N i) :=
   (moduleTensorProdEquiv R M N) ≪≫ₗ (TensorProdEquivProdTensor R M N) ≪≫ₗ (prodTensorEquiv R M N)
 
-noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite R M]
-  (m : M) (n : ∀ i, N i) :
-  tensorProdbilinear_map R M N (m ⊗ₜ n) =
-  fun i ↦ (m ⊗ₜ n i) := by
+lemma tensorProdbilinear_map_apply (m : M) (n : ∀ i, N i) :
+    tensorProdbilinear_map R M N (m ⊗ₜ n) = fun i ↦ (m ⊗ₜ n i) := by
   unfold tensorProdbilinear_map
-  simp [moduleTensorProdEquiv]
+  simp only [moduleTensorProdEquiv, LinearEquiv.trans_apply, congr_tmul, LinearEquiv.refl_apply]
   -- the goal now mentions `(Module.Free.repr R M) m` which has type `(some set) →₀ R`
   -- i.e. `Finsupp`, so we can (rather inelegantly) change the goal so that it
   -- doesn't mention m at all and only mentions `m'`, this finitely-supported function.
   let m' := (Module.Free.repr R M) m
   have hm' : (Module.Free.repr R M).symm m' = m := by simp [m']
   rw [← hm']
-  simp
+  simp only [LinearEquiv.apply_symm_apply]
   -- Now the goal only has m' not m so we can apply an induction principle
   induction m' using Finsupp.induction_linear
   · -- goal true for zero function
@@ -203,9 +197,10 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
     -- randomly move an equiv to the other side out of hope more
     -- than anything else
     rw [← LinearEquiv.eq_symm_apply]
-    simp [prodTensorEquiv]
+    simp only [prodTensorEquiv, LinearEquiv.piCongrRight_symm]
     ext i
-    simp
+    simp only [LinearEquiv.piCongrRight_apply, LinearEquiv.rTensor_symm_tmul, LinearEquiv.symm_symm,
+      LinearEquiv.apply_symm_apply, m']
     -- we are surely close!
     -- ⊢ (TensorProdEquivProdTensor R M N) (Finsupp.single j r ⊗ₜ[R] n) i = Finsupp.single j r ⊗ₜ[R] n i
     -- Kevin got here
@@ -220,7 +215,7 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
     clear k hm' m' m
     rw [LinearEquiv.symm_apply_eq,finsuppLEquivDirectSum_single,
       finsuppScalarLeft_apply_tmul, Finsupp.sum_single_index (by simp),
-      finsuppLEquivDirectSum_single, DirectSum.lof_eq_of, DirectSum.lof_eq_of, proddirectsum']
+      finsuppLEquivDirectSum_single, DirectSum.lof_eq_of, DirectSum.lof_eq_of, directSumProd_equiv_prodSum]
     simp_rw [← LinearEquiv.toFun_eq_coe]
     conv_lhs =>
       enter [2, x]
@@ -229,11 +224,15 @@ noncomputable def tensorProdbilinear_map_apply [Module.Free R M] [Module.Finite 
       rw [ite_apply, Pi.zero_apply, Pi.smul_apply, apply_ite (DFunLike.coe _), AddMonoidHom.map_zero]
     apply Fintype.sum_dite_eq
 
+
+#exit
+
 #check LinearMap.single
 #check LinearMap.proj
+
 noncomputable def tensorProdbilinear_map_apply' [Module.Free R M] [Module.Finite R M]
-  (m : M) (n : ∀ i, N i) (i : ι):
-  tensorProdbilinear_map R M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
+    (m : M) (n : ∀ i, N i) (i : ι) :
+    tensorProdbilinear_map (R := R) M N (m ⊗ₜ n) i = (m ⊗ₜ n i) := by
   rw [tensorProdbilinear_map_apply]
 
 
