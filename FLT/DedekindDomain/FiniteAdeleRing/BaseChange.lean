@@ -559,8 +559,7 @@ noncomputable def ProdAdicCompletions.baseChangeEquiv :
       let restrict := (prod_equiv.restrictScalars K).toLinearEquiv
       -- `equiv_prod` gives a map from `L ⊗ ∏ K v ≃ ∏v∣w ∏w L w`
       let equiv_prod := commute ≪≫ₗ restrict
-      -- not picking up instance; `inst_alg` should be a `haveI`? Fails on next `haveI`
-      let inst_alg : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
+      letI : Algebra K (ProdAdicCompletions B L) := RingHom.toAlgebra <|
         (algebraMap L (ProdAdicCompletions B L)).comp (algebraMap K L)
       haveI : IsScalarTower K L (ProdAdicCompletions B L) :=
         IsScalarTower.of_algebraMap_eq (congrFun rfl)
