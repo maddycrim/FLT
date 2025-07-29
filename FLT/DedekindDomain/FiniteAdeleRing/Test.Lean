@@ -73,6 +73,35 @@ variable (𝓕) in
 E.g. for the cofinite filter, these are just the finite subsets. -/
 def Filter.complement : Set (Set ι) := (fun S => Sᶜ) '' 𝓕.sets
 
+instance : Max 𝓕.complement where
+  max i j := by
+    obtain ⟨i, hi⟩ := i
+    obtain ⟨j, hj⟩ := j
+    let c := i ∪ j
+    have : c ∈ 𝓕.complement := by
+      unfold Filter.complement at hi hj ⊢
+      simp only [mem_image, Filter.mem_sets] at hi hj ⊢
+      obtain ⟨si, hsi⟩ := hi
+      obtain ⟨sj, hsj⟩ := hj
+      use si ∩ sj
+      constructor
+      · exact 𝓕.inter_sets hsi.1 hsj.1
+      · unfold c
+        rw [compl_inter, hsi.2, hsj.2]
+    exact ⟨c, this⟩
+
+instance : SemilatticeSup 𝓕.complement := by sorry
+-- where
+--   le := ?le
+--   le_refl := ?le_refl
+--   le_trans := ?le_trans
+--   lt_iff_le_not_ge := ?lt_iff_le_not_ge
+--   le_antisymm := ?le_antisymm
+--   sup := ?sup
+--   le_sup_left := ?le_sup_left
+--   le_sup_right := ?le_sup_right
+--   sup_le := ?sup_le
+
 theorem principal_filter_order {S₁ S₂ : 𝓕.complement} (h : S₁ ≤ S₂) :
     (𝓟 S₂ᶜ : Filter ι) ≤ 𝓟 S₁ᶜ := by
   simp only [le_principal_iff, mem_principal, compl_subset_compl]; exact h
@@ -138,7 +167,7 @@ instance [Π i, AddCommGroup (R i)] [∀ i, AddSubgroupClass (T i) (R i)] :
 
 -- when #25715 lands we'll be able to change these to AddCommMonoid
 -- restricted product of A-modules is an A-module
-instance [Π i, AddCommGroup (R i)] [∀ i, Module A (R i)]
+instance module [Π i, AddCommGroup (R i)] [∀ i, Module A (R i)]
     -- next line is how we do "SubmoduleClass"
     [∀ i, AddSubgroupClass (T i) (R i)] [∀ i, SMulMemClass (T i) A (R i)] :
     Module A (Πʳ i, [R i, B i]_[ℱ]) where
@@ -170,36 +199,66 @@ variable [Π i, AddCommGroup (R i)] [∀ i, Module A (R i)] {C : ∀ i, Submodul
 
 open Set Filter RestrictedProduct
 
-instance add (S : ℱ.complement) :
-  AddCommMonoid (mem_A_away_from_S (R:=R) (fun i ↦ (C i : Set (R i))) S) := by
+instance (S : ℱ.complement) :
+  AddCommMonoid (mem_A_away_from_S (R := R) (fun i ↦ (C i : Set (R i))) S) := by
   dsimp [mem_A_away_from_S]
   exact AddCommGroup.toDivisionAddCommMonoid.toAddCommMonoid
 
-instance module (S : ℱ.complement) :
+instance module' (S : ℱ.complement) :
   Module A (mem_A_away_from_S (R:=R) (fun i ↦ (C i : Set (R i))) S) := by
   dsimp [mem_A_away_from_S]
-  exact
-    «instModuleRestrictedProductCoeOfSMulMemClass_external:file:///c%3A/Users/Maddy/Documents/Github/FLT/FLT/DedekindDomain/FiniteAdeleRing/Test.Lean»
-
-
+  exact module
 
 def inclusion_module (S₁ S₂ : ℱ.complement) (h : S₁ ≤ S₂) :
     mem_A_away_from_S (fun i ↦ (C i : Set (R i))) S₁ →ₗ[A]
       mem_A_away_from_S ((fun i ↦ (C i : Set (R i)))) S₂ where
-  __ := RestrictedProduct.inclusion R _ (principal_filter_order h)
-  map_mul' _ _ := rfl
+        toFun := inclusion S₁ S₂ h
+        map_add' _ _ := rfl
+        map_smul' _ _ := rfl
+  -- __ := RestrictedProduct.inclusion R _ (principal_filter_order h)
+  -- map_mul' _ _ := rfl
 
-
+def inclusion_to_restrictedProduct_module (S : ℱ.complement) :
+    mem_A_away_from_S (fun i ↦ (C i : Set (R i))) S →ₗ[A] Πʳ i, [R i, C i]_[ℱ] where
+      toFun := inclusion_to_restrictedProduct S
+      map_add' _ _ := rfl
+      map_smul' _ _ := rfl
 
 
 
 #check _root_.inclusion (𝓕 := ℱ) (A:= (fun i ↦ (C i : Set (R i))))
 
 #check Module.IsDirectLimit (mem_A_away_from_S (𝓕 := ℱ) (fun i ↦ (C i : Set (R i))))
-  Πʳ i, [R i, C i]_[ℱ] --(_root_.inclusion (𝓕 := ℱ) (A:= (fun i ↦ (C i : Set (R i)))))
+  Πʳ i, [R i, C i]_[ℱ] inclusion_module
+
+
+instance : IsDirected (ℱ.complement) (fun i j ↦ i ≤ j) where
+  directed i j := by
+    use i ⊔ j
+    haveI : SemilatticeSup ℱ.complement := by infer_instance
+    constructor
+    · convert this.le_sup_left i j using 1
+
 
 instance RestrictedProductIsDirectLimit :
-  Module.IsDirectLimit R Πʳ i, [R i, C i]_[ℱ] (inclusion_to_restrictedProduct C S) := sorry
+    Module.IsDirectLimit (mem_A_away_from_S (fun i ↦ (C i : Set (R i))))
+    Πʳ i, [R i, C i]_[ℱ] (inclusion_module (ℱ := ℱ)) inclusion_to_restrictedProduct_module where
+      inj Si Sj mi mj hmij := by
+        use Si ⊔ Sj
+
+
+        --have := @directed_of _ ?_ ?_ Si Sj
+        unfold inclusion_module
+        simp only [LinearMap.coe_mk, AddHom.coe_mk, Subtype.exists]
+        unfold _root_.inclusion
+        simp only
+        unfold RestrictedProduct.inclusion
+        simp only
+        sorry
+      surj := sorry
+
+#exit
+
 
 
 
