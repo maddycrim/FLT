@@ -27,6 +27,7 @@ import Mathlib.Algebra.Colimit.Module
 import Mathlib.RingTheory.Flat.Basic
 import FLT.DedekindDomain.FiniteAdeleRing.TensorPi
 import Mathlib.Order.DirectedInverseSystem
+import Mathlib.Algebra.Category.ModuleCat.Basic
 
 
 
