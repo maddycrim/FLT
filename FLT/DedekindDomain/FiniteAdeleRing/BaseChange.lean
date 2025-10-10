@@ -27,14 +27,8 @@ import Mathlib.RingTheory.Valuation.RankOne
 import Mathlib.Topology.Algebra.Module.FiniteDimension
 import FLT.DedekindDomain.AdicValuation
 import FLT.DedekindDomain.Completion.BaseChange
-<<<<<<< HEAD
-import FLT.DedekindDomain.FiniteAdeleRing.TensorPi
-import FLT.Mathlib.Topology.Algebra.RestrictedProduct
-import Mathlib.LinearAlgebra.TensorProduct.Prod
-=======
 import FLT.DedekindDomain.FiniteAdeleRing.TensorRestrictedProduct
 
->>>>>>> main
 /-!
 
 # Base change of adele rings.

@@ -37,8 +37,6 @@ variable (P₁ P₂ : Type*) [AddCommMonoid P₁] [Module R P₁] [AddCommMonoid
   (g₁ : ∀ i, M i →ₗ[R] P₁) (g₂ : ∀ i, M i →ₗ[R] P₂)
 
 
--- this is a nightmare. need to clean up and fully understand
-set_option pp.proofs true in
 open Classical in
 noncomputable def lift [IsDirectLimit M P₁ f g₁] (Hg : ∀ i j hij x, g₂ j (f i j hij x) = g₂ i x) :
   P₁ →ₗ[R] P₂ where
